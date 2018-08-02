@@ -1,64 +1,58 @@
 function tetris(canvasId) {
-  function checkVecsEqual(vec1, vec2) {
-    return vec1.x == vec2.x && vec1.y == vec2.y;
-  }
+  let Vector = {
+    equal: function(vec1, vec2) {
+      return vec1.x == vec2.x && vec1.y == vec2.y;
+    },
+      
+    create: function(x, y) {
+      return {x: x, y: y}
+    }, 
     
-  function createVector(x, y) {
-    return {x: x, y: y}
-  }  
-  
-  function addVectors(vector1, vector2) {
-    return {x : vector1.x + vector2.x, y: vector1.y + vector2.y}    
-  }
-  
-  function rotateVector(vector, direction) {
-    if(direction < 0) {
-      return { x : -vector.y, y: vector.x };
+    add: function(vector1, vector2) {
+      return {x : vector1.x + vector2.x, y: vector1.y + vector2.y}    
+    },
+    
+    rotate: function(vector, direction) {
+      if(direction < 0) {
+        return { x : -vector.y, y: vector.x };
+      }
+      
+      return {x: -vector.x, y: vector.y};
     }
-    
-    return {x: -vector.x, y: vector.y};
-  }
+  };
+
+  Vector.directions = {
+    right: Vector.create(1, 0),
+    left: Vector.create(-1, 0),
+    up: Vector.create(0, -1),
+    down: Vector.create(0, 1)
+  };
   
-  function toLocalPosition(worldPosition, worldAnchorPosition) {
-    return {x: worldPosition.x - worldAnchorPosition.x, y: worldPosition.y - worldAnchorPosition.y};
-  }
-  
-  function toWorldPositon(localPosition, worldAnchorPosition) {
-    return {x: localPosition.x + worldAnchorPosition.x, y: localPosition.y + worldAnchorPosition.y};
-  }
-  
-  var colors = [
+  let colors = [
     [255, 255, 255],
     [255, 0, 255],
     [255, 255, 0],
     [0, 255, 255]
-  ]
-    
-  var directions = {
-    right: createVector(1, 0),
-    left: createVector(-1, 0),
-    up: createVector(0, -1),
-    down: createVector(0, 1)
-  }
-  
-  var figureTypes = [
+  ];
+
+  let figureTypes = [
     {
       name: "S",
       data: [
-        createVector(-1, 0),
-        createVector(0, 0),
-        createVector(0, 1),
-        createVector(1, 1)
+        Vector.create(-1, 0),
+        Vector.create(0, 0),
+        Vector.create(0, 1),
+        Vector.create(1, 1)
       ]
     },
   
     {
       name: "I",
       data: [
-        createVector(0, -1),
-        createVector(0, 0),
-        createVector(0, 1),
-        createVector(0, 2)
+        Vector.create(0, -1),
+        Vector.create(0, 0),
+        Vector.create(0, 1),
+        Vector.create(0, 2)
       ]
     },
     
@@ -66,109 +60,101 @@ function tetris(canvasId) {
       disableRotate: true,
       name: "O", 
       data: [
-        createVector(0, 0),
-        createVector(0, 1),
-        createVector(1, 1),
-        createVector(1, 0)
+        Vector.create(0, 0),
+        Vector.create(0, 1),
+        Vector.create(1, 1),
+        Vector.create(1, 0)
       ]
     },
     
     {
       name: "Z",
       data: [
-        createVector(-1, 0),
-        createVector(0, 0),
-        createVector(0, -1),
-        createVector(1, -1)
+        Vector.create(-1, 0),
+        Vector.create(0, 0),
+        Vector.create(0, -1),
+        Vector.create(1, -1)
       ]
     },
     
     {
       name: "L",
       data: [
-        createVector(0, 0),
-        createVector(0, -1),
-        createVector(0, -2),
-        createVector(1, 0)
+        Vector.create(0, 0),
+        Vector.create(0, -1),
+        Vector.create(0, -2),
+        Vector.create(1, 0)
       ]
     }
   ];
   
   function getRandEntry(arr) {
-    var index = Math.floor( Math.random() * arr.length); 
-    
+    let index = Math.floor(Math.random() * arr.length);
     return arr[index];
   }
   
   function createFigure(gameField) {
-    var rotationCount = Math.floor(Math.random() * 4);
-    var figureType = getRandEntry(figureTypes);
-    var color = getRandEntry(colors);
+    let rotationCount = Math.floor(Math.random() * 4);
+    let figureType = getRandEntry(figureTypes);
+    let color = getRandEntry(colors);
     
-    var figure = {
+    let figure = {
       color: color,
-      position: createVector(Math.floor(gameField.width / 2), 1),
-      data: figureType.data.map(vec => createVector(vec.x, vec.y)),
+      position: Vector.create(Math.floor(gameField.width / 2), 1),
+      data: figureType.data.map(vec => Vector.create(vec.x, vec.y)),
       disableRotate: figureType.disableRotate
     };
     
-    while(rotationCount) {
+    while(rotationCount--) {
       figure = rotateFigure(gameField, figure, -1);
-      rotationCount--;
     }
     
     return figure;    
   }
   
   function createGameField(width, height) {
-    var gameField = {
-      data: []
-    };
-    
-    for(var y = 0; y < height; y++) {
-      var line = new Array(width);      
-      gameField.data.push(line);
-    }
-    
-    gameField.loop = function(iter){
-      for(var y=0; y < height; y++) {
-        for(var x=0; x < width; x++) {
-          var cell = this.data[y][x];
-          
-          iter(x, y, cell);
+    let gameField = {
+      data: [],
+      width: width,
+      height: height,
+      set: function(vec, color) {
+        this.data[vec.y][vec.x] = color;
+      },      
+      get: function(x, y) {
+        if (x < 0 || y < 0 || x >= width || y >= height)
+          return 1;
+        
+        return this.data[y][x];        
+      },      
+      getLine: function(index) {
+        return this.data[index];
+      },      
+      setLine: function(index, line) {
+        this.data[index] = line;
+      },
+      loop: function(iter){
+        for(let y = 0; y < height; y++) {
+          for(let x = 0; x < width; x++) {
+            let cell = this.data[y][x];
+            
+            iter(x, y, cell);
+          }
         }
       }
+    };
+    
+    for(let y = 0; y < height; y++) {
+      let line = new Array(width);      
+      gameField.data.push(line);
     }
-    
-    gameField.set = function(vec, color) {
-      this.data[vec.y][vec.x] = color;
-    }
-    
-    gameField.get = function(x, y) {
-      if (x < 0 || y < 0 || x >= width || y >= height)
-        return 1;
-      
-      return this.data[y][x];        
-    }
-    
-    gameField.getLine = function(index) {
-      return this.data[index];
-    }
-    
-    gameField.setLine = function(index, line) {
-      this.data[index] = line;
-    }
-    
-    gameField.width = width;
-    gameField.height = height;
-    
+
     return gameField;
   }
   
   function moveFigure(gameField, figure, directionVec) {      
-    var newPosition = addVectors(figure.position, directionVec);
+    let newPosition = Vector.add(figure.position, directionVec);
     
-    if(!checkBounderies(gameField, figure.data, newPosition)) {
+    if(crossBounderies(gameField, figure.data, newPosition)) {
       return figure;
     }
     
@@ -183,9 +169,9 @@ function tetris(canvasId) {
       return figure;
     }
     
-    var newData = figure.data.map(vec => rotateVector(vec, direction));
+    let newData = figure.data.map(vec => Vector.rotate(vec, direction));
 
-    if(!checkBounderies(gameField, newData, figure.position)) {
+    if(crossBounderies(gameField, newData, figure.position)) {
       return figure;
     }
     
@@ -195,28 +181,28 @@ function tetris(canvasId) {
     }
   }
   
-  function checkBounderies(gameField, vecs, position) {
-    for(var vec of vecs) {
-      var worldPosition = toWorldPositon(vec, position);
+  function crossBounderies(gameField, vecs, position) {
+    for(let vec of vecs) {
+      let worldPosition = Vector.add(vec, position);
       
       if(gameField.get(worldPosition.x, worldPosition.y)) {
-        return false;
+        return true;
       }
     }
     
-    return true;
+    return false;
   }
-    
+
   function landFigure(gameField, figure) {
-    for(var vec of figure.data) {
-      var worldPosition = toWorldPositon(vec, figure.position);
+    for(let vec of figure.data) {
+      let worldPosition = Vector.add(vec, figure.position);
       
       gameField.set(worldPosition, figure.color);
     }
   }
   
   function getLinesCompletion(gameField) {
-    var linesCompletion = new Array(gameField.height);
+    let linesCompletion = new Array(gameField.height);
     
     gameField.loop((x, y, cell) => {
       linesCompletion[y] = (linesCompletion[y] || 0);
@@ -229,12 +215,13 @@ function tetris(canvasId) {
     return linesCompletion;
   }
   
-  function removeCompletedLines(gameField, linesCompletion) {
-    var newGameField = createGameField(gameField.width, gameField.height);
-    var copyIndex = gameField.height - 1; 
+  function removeCompletedLines(gameField) {
+    let linesCompletion = getLinesCompletion(gameField);
+    let newGameField = createGameField(gameField.width, gameField.height);
+    let copyIndex = gameField.height - 1; 
     
-    for(var lineIndex = linesCompletion.length - 1; lineIndex >= 0; lineIndex--) {
-      var lineCompletion = linesCompletion[lineIndex];
+    for(let lineIndex = linesCompletion.length - 1; lineIndex >= 0; lineIndex--) {
+      let lineCompletion = linesCompletion[lineIndex];
       
       if(lineCompletion < gameField.width && lineCompletion > 0) {
         newGameField.setLine(copyIndex, gameField.getLine(lineIndex));
@@ -245,44 +232,25 @@ function tetris(canvasId) {
     return newGameField;
   }
   
-  function createInput(animationManager, speed, stickingDelay) {
-    var toProcess = {};
-    var stickingDelays = {};
+  function createInput(animationManager, speed) {
+    let toProcess = {};
 
     document.addEventListener("keydown", e => toProcess[e.key] = true);
-    document.addEventListener("keyup", e => {
-      toProcess[e.key] = false;
-      stickingDelays[e.key] = 0;
-    });
+    document.addEventListener("keyup", e => toProcess[e.key] = false);
 
     return {
-      processInput: function(map, config) {        
-        var keys = Object.keys(toProcess).filter(key => toProcess[key]);
+      processInput: function(map, config = {}) {        
+        let actions = Object.keys(toProcess).filter(key => toProcess[key] && map[key]).map(key => ({
+          key: key,
+          action: map[key],
+          abort: (config.abortKeys || []).includes(key)
+        }));
 
-        for(var key of keys) {
-          var action = map[key];
-          
-          if(!action) {
-            continue;
-          }
-          
-          stickingDelays[key] = stickingDelays[key] || 0;
-          
-          if(stickingDelays[key] < stickingDelay) {
-            stickingDelays[key]++;
-            continue;
-          }
-
+        actions.forEach(({key, action, abort}) => 
           animationManager.animate(key, speed, () => {
             action();
-            
-            if(config && config.resetKeys) {
-              for(var key of config.resetKeys) {
-                toProcess[key] = false;
-              }
-            }
-          });
-        }
+            toProcess[key] = !abort;
+        }));
       }
     };
   }
@@ -303,74 +271,45 @@ function tetris(canvasId) {
       }
     }
     
-    function createDelay(d) {
-      return {
-        ticksPassed: 0,
-        delay: d,
-        executeWithDelay: function(func) {
-          if(this.ticksPassed > this.delay) {
-            func();
-          } else {
-            this.ticksPassed++;
-          }
-        }
-      }
-    }
-
     return {  
       animations: {},
-      delays: {},
       animate: function(key, speed, f) {
         if(this.animations[key]) {
           this.animations[key].animate(f);
         } else {
           this.animations[key] = createAnimation(speed);
-        }
-      },
-      delay: function(key, d, f) {
-        if(this.delays[key]) {
-          this.delays[key].executeWithDelay(f);
-        } else {
-          this.delays[key] = createDelay(d, f);
           f();
         }
-      },
-      resetDelay: function(key) {
-        this.delays[key] = null;
-      }      
+      }
     };
   }
   
   function update(world, input, animationManager) {
-    var ticksSinceLastFigureFall = world.ticksSinceLastFigureFall;
-    var currentFigure = world.currentFigure;
-    var gameField = world.gameField;
+    let ticksSinceLastFigureFall = world.ticksSinceLastFigureFall;
+    let currentFigure = world.currentFigure;
+    let gameField = world.gameField;
     
     input.processInput({
-      ArrowLeft: () => currentFigure = moveFigure(gameField, currentFigure, directions.left),
-      ArrowRight: () => currentFigure = moveFigure(gameField, currentFigure, directions.right),
-      ArrowDown: () => currentFigure = moveFigure(gameField, currentFigure, directions.down),
+      ArrowLeft: () => currentFigure = moveFigure(gameField, currentFigure, Vector.directions.left),
+      ArrowRight: () => currentFigure = moveFigure(gameField, currentFigure, Vector.directions.right),
+      ArrowDown: () => currentFigure = moveFigure(gameField, currentFigure, Vector.directions.down),
       Enter: () => currentFigure = rotateFigure(gameField, currentFigure, -1)
-    }, {resetKeys: ["Enter"]});
+    }, {abortKeys: ["Enter", "ArrowLeft", "ArrowRight"]});
     
-    animationManager.animate(
-      "figureFall",
-      world.speed,
+    animationManager.animate("figureFall", world.speed,
       () => {
-        var oldPosition = currentFigure.position;
+        let oldPosition = currentFigure.position;
         
-        currentFigure = moveFigure(gameField, currentFigure, directions.down);
+        currentFigure = moveFigure(gameField, currentFigure, Vector.directions.down);
         
-        if(checkVecsEqual(oldPosition, currentFigure.position)) {
+        if(Vector.equal(oldPosition, currentFigure.position)) {
           // do we need to create new instance of gameField here?
           landFigure(gameField, currentFigure);
           currentFigure = createFigure(gameField);
-        }  
-      });  
-      
-    var linesCompletion = getLinesCompletion(gameField);
-    
-    gameField = removeCompletedLines(gameField, linesCompletion);
+        }
+      });
+
+    gameField = removeCompletedLines(gameField);
     
     return {
       ...world,
@@ -381,20 +320,15 @@ function tetris(canvasId) {
   }
   
   function createRenderCtx(canvasId) {
-    var canvas = document.getElementById(canvasId);
-    var ctx = canvas.getContext('2d');
+    let canvas = document.getElementById(canvasId);
+    let ctx = canvas.getContext('2d');
     
     return ctx;
   }
   
   function render(world, ctx) {    
-    var gameField = world.gameField;
-    var figure = world.currentFigure;
-        
-    function flash() {
-      ctx.fillStyle = 'rgb(0,0,0)';    
-      ctx.fillRect(0, 0, 10 * world.gameField.width, 10 * world.gameField.height);        
-    }
+    let gameField = world.gameField;
+    let figure = world.currentFigure;
     
     function fillCell(x, y, color) {
       if(!color)
@@ -404,19 +338,19 @@ function tetris(canvasId) {
       ctx.fillRect(x * 10, y * 10, 10, 10);
     }
     
-    flash();
-    
+    ctx.fillStyle = 'rgb(0,0,0)';    
+    ctx.fillRect(0, 0, 10 * world.gameField.width, 10 * world.gameField.height);
+
     gameField.loop(fillCell);    
     
-    for(var vec of figure.data) {
-      var worldPosition = toWorldPositon(vec, figure.position);
-      
+    figure.data.forEach(vec => {
+      let worldPosition = Vector.add(vec, figure.position); 
       fillCell(worldPosition.x, worldPosition.y, figure.color);
-    }
+    });
   }
   
   function createWorld(speed, width, height) {
-    var gameField = createGameField(width, height);
+    let gameField = createGameField(width, height);
     
     return {
       currentFigure: createFigure(gameField),
@@ -425,10 +359,10 @@ function tetris(canvasId) {
     }
   }
     
-  var renderCtx = createRenderCtx(canvasId);
-  var animationManager = createAnimationManager();
-  var input = createInput(animationManager, 20, 10);
-  var world = createWorld(5, 15, 30);
+  let renderCtx = createRenderCtx(canvasId);
+  let animationManager = createAnimationManager();
+  let input = createInput(animationManager, 25);
+  let world = createWorld(5, 15, 30);
   
   setInterval(function() {
     world = update(world, input, animationManager);
