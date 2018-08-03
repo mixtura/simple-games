@@ -1,89 +1,203 @@
-function tetris(canvasId) {
-  let Vector = {
-    equal: function(vec1, vec2) {
-      return vec1.x == vec2.x && vec1.y == vec2.y;
-    },
-      
-    create: function(x, y) {
-      return {x: x, y: y}
-    }, 
+let Vector2 = (function() {
+  let Vector2 = function(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  Vector2.prototype.add = function(vector) {
+    return new Vector2(this.x + vector.x, this.y + vector.y);    
+  };
+  
+  Vector2.prototype.rotate = function(angle) {
+    angle = angle % 4; 
     
-    add: function(vector1, vector2) {
-      return {x : vector1.x + vector2.x, y: vector1.y + vector2.y}    
-    },
-    
-    rotate: function(vector, direction) {
-      if(direction < 0) {
-        return { x : -vector.y, y: vector.x };
+    switch(angle) {
+      case 1:
+      case -3: 
+        return new Vector2(-this.x, this.y);        
+      case -1:
+      case 3:
+        return new Vector2(-this.y, this.x);        
+      case 2:
+      case -2:
+        return new Vector2(this.x, -this.y);        
+      default:
+        return this;
+    }
+  };
+  
+  Vector2.equal = function(vec1, vec2) {
+    return vec1.x == vec2.x && vec1.y == vec2.y;
+  };
+
+  Vector2.directions = {
+    right: new Vector2(1, 0),
+    left: new Vector2(-1, 0),
+    up: new Vector2(0, -1),
+    down: new Vector2(0, 1)
+  };
+
+  return Vector2;
+})();
+
+let GameField = (function() {  
+  let GameField = function() {
+    var args = Array.prototype.slice.call(arguments);
+
+    if(args.length == 1) {
+      if(!Array.isArray(args[0]) && !Array.isArray(args[0][0])) {
+        throw "In case of single argument, it needs to be 2-dimension array.";
       }
+
+      this.data = args[0];
+      this.width = this.data[0].length;
+      this.height = this.data.length;
       
-      return {x: -vector.x, y: vector.y};
+      return this;
+    }
+
+    if(args.length == 2) {
+      this.width = args[0];
+      this.height = args[1];
+      this.data = [];
+
+      for(let y = 0; y < this.height; y++) {
+        let line = new Array(this.width);      
+        this.data.push(line);
+      }
+
+      return this;
+    }
+
+    throw "Wrong arguments.";
+  }
+  
+  GameField.prototype.copy = function() {
+    var newData = this.data.map(line => line.slice());
+    var newGameField = new GameField(newData);
+    
+    return newGameField;
+  }
+
+  GameField.prototype.hit = function(vecs) {
+    return vecs.some(vec => vec.x < 0 || vec.y < 0 || vec.x >= this.width || vec.y >= this.height || !!this.get(vec));      
+  };
+
+  GameField.prototype.set = function(vec, color) {
+    this.data[vec.y][vec.x] = color;
+  };
+
+  GameField.prototype.get = function(vec) {        
+    return this.data[vec.y][vec.x];        
+  };
+
+  GameField.prototype.getLine = function(index) {
+    return this.data[index];
+  };
+
+  GameField.prototype.setLine = function(index, line) {
+    this.data[index] = line.slice();
+  };
+
+  GameField.prototype.loop = function(iter) {
+    for(let y = 0; y < this.height; y++) {
+      for(let x = 0; x < this.width; x++) {
+        let cell = this.data[y][x];
+        
+        iter(x, y, cell);
+      }
     }
   };
 
-  Vector.directions = {
-    right: Vector.create(1, 0),
-    left: Vector.create(-1, 0),
-    up: Vector.create(0, -1),
-    down: Vector.create(0, 1)
-  };
-  
-  let colors = [
+  return GameField;
+})();
+
+let GameWorld = (function() {
+  let GameWorld = function(gameField, figure, speed) {
+    this.gameField = gameField;
+    this.figure = figure;
+    this.speed = speed;
+
+    this.oldGameField = this.gameField;
+    this.oldFigure = this.figure;
+  }
+
+  GameWorld.prototype.needRedraw = function() {
+    return this.oldGameField != this.gameField || this.oldFigure != this.figure;  
+  }
+
+  GameWorld.prototype.createNew = function(gameField, figure, speed) {
+    var oldGameField = this.gameField;
+    var oldFigure = this.figure;
+
+    var gameWorld = new GameWorld(gameField, figure, speed);
+
+    gameWorld.oldGameField = oldGameField;
+    gameWorld.oldFigure = oldFigure;
+
+    return gameWorld;
+  }
+
+  return GameWorld;
+})();
+
+let Figure = (function() {
+  const colors = [
     [255, 255, 255],
     [255, 0, 255],
     [255, 255, 0],
     [0, 255, 255]
   ];
 
-  let figureTypes = [
+  const figureTypes = [
     {
       name: "S",
       data: [
-        Vector.create(-1, 0),
-        Vector.create(0, 0),
-        Vector.create(0, 1),
-        Vector.create(1, 1)
+        new Vector2(-1, 0),
+        new Vector2(0, 0),
+        new Vector2(0, 1),
+        new Vector2(1, 1)
       ]
     },
   
     {
       name: "I",
       data: [
-        Vector.create(0, -1),
-        Vector.create(0, 0),
-        Vector.create(0, 1),
-        Vector.create(0, 2)
+        new Vector2(0, -1),
+        new Vector2(0, 0),
+        new Vector2(0, 1),
+        new Vector2(0, 2)
       ]
     },
     
     {
-      disableRotate: true,
+      disableRotation: true,
       name: "O", 
       data: [
-        Vector.create(0, 0),
-        Vector.create(0, 1),
-        Vector.create(1, 1),
-        Vector.create(1, 0)
+        new Vector2(0, 0),
+        new Vector2(0, 1),
+        new Vector2(1, 1),
+        new Vector2(1, 0)
       ]
     },
     
     {
       name: "Z",
       data: [
-        Vector.create(-1, 0),
-        Vector.create(0, 0),
-        Vector.create(0, -1),
-        Vector.create(1, -1)
+        new Vector2(-1, 0),
+        new Vector2(0, 0),
+        new Vector2(0, -1),
+        new Vector2(1, -1)
       ]
     },
     
     {
       name: "L",
       data: [
-        Vector.create(0, 0),
-        Vector.create(0, -1),
-        Vector.create(0, -2),
-        Vector.create(1, 0)
+        new Vector2(0, 0),
+        new Vector2(0, -1),
+        new Vector2(0, -2),
+        new Vector2(1, 0)
       ]
     }
   ];
@@ -92,132 +206,87 @@ function tetris(canvasId) {
     let index = Math.floor(Math.random() * arr.length);
     return arr[index];
   }
-  
-  function createFigure(gameField) {
-    let rotationCount = Math.floor(Math.random() * 4);
-    let figureType = getRandEntry(figureTypes);
+
+  let Figure = function(position, color, data, disableRotation) {
+    this.position = position;
+    this.color = color;
+    this.data = data;
+    this.disableRotation = disableRotation;
+  }
+
+  Figure.createRandom = function(gameField) {
+    let angle = Math.floor(Math.random() * 4);
     let color = getRandEntry(colors);
+    let type = getRandEntry(figureTypes);
+    let position = new Vector2(Math.floor(gameField.width / 2), 1);
+    let data = type.data.map(vec => new Vector2(vec.x, vec.y));
+    let figure = new Figure(position, color, data, type.disableRotation);
     
-    let figure = {
-      color: color,
-      position: Vector.create(Math.floor(gameField.width / 2), 1),
-      data: figureType.data.map(vec => Vector.create(vec.x, vec.y)),
-      disableRotate: figureType.disableRotate
-    };
-    
-    while(rotationCount--) {
-      figure = rotateFigure(gameField, figure, -1);
+    return figure.rotate(gameField, angle);
+  }
+
+  Figure.prototype.move = function(gameField, directionVec) {      
+    let newPosition = this.position.add(directionVec);
+    let worldPositions = this.data.map(vec => vec.add(newPosition));
+
+    if(gameField.hit(worldPositions)) {
+      return this;
     }
-    
-    return figure;    
+
+    return new Figure(newPosition, this.color, this.data, this.disableRotation);
   }
   
-  function createGameField(width, height) {
-    let gameField = {
-      data: [],
-      width: width,
-      height: height,
-      set: function(vec, color) {
-        this.data[vec.y][vec.x] = color;
-      },      
-      get: function(x, y) {
-        if (x < 0 || y < 0 || x >= width || y >= height)
-          return 1;
-        
-        return this.data[y][x];        
-      },      
-      getLine: function(index) {
-        return this.data[index];
-      },      
-      setLine: function(index, line) {
-        this.data[index] = line;
-      },
-      loop: function(iter){
-        for(let y = 0; y < height; y++) {
-          for(let x = 0; x < width; x++) {
-            let cell = this.data[y][x];
-            
-            iter(x, y, cell);
-          }
-        }
-      }
-    };
+  Figure.prototype.rotate = function(gameField, angle) {  
+    if(this.disableRotation) {
+      return this;
+    }
     
-    for(let y = 0; y < height; y++) {
-      let line = new Array(width);      
-      gameField.data.push(line);
+    let newData = this.data.map(vec => vec.rotate(angle));
+    let worldPositions = this.getWorldData();
+
+    if(gameField.hit(worldPositions)) {
+      return this;
+    }
+    
+    return new Figure(this.position, this.color, newData, this.disableRotation);
+  }
+
+  Figure.prototype.getWorldData = function() {
+    return this.data.map(vec => vec.add(this.position));
+  }
+
+  return Figure;
+})();
+
+function tetris(canvas) {
+  function landFigure(gameField, figure) {    
+    gameField = gameField.copy();
+
+    for(let vec of figure.data) {
+      let worldPosition = vec.add(figure.position);
+      
+      gameField.set(worldPosition, figure.color);
     }
 
     return gameField;
   }
   
-  function moveFigure(gameField, figure, directionVec) {      
-    let newPosition = Vector.add(figure.position, directionVec);
-    
-    if(crossBounderies(gameField, figure.data, newPosition)) {
-      return figure;
-    }
-    
-    return {
-      ...figure,
-      position: newPosition,
-    }
-  }
-  
-  function rotateFigure(gameField, figure, direction) {  
-    if(figure.disableRotate) {
-      return figure;
-    }
-    
-    let newData = figure.data.map(vec => Vector.rotate(vec, direction));
-
-    if(crossBounderies(gameField, newData, figure.position)) {
-      return figure;
-    }
-    
-    return {
-      ...figure,
-      data: newData
-    }
-  }
-  
-  function crossBounderies(gameField, vecs, position) {
-    for(let vec of vecs) {
-      let worldPosition = Vector.add(vec, position);
-      
-      if(gameField.get(worldPosition.x, worldPosition.y)) {
-        return true;
-      }
-    }
-    
-    return false;
-  }
-
-  function landFigure(gameField, figure) {
-    for(let vec of figure.data) {
-      let worldPosition = Vector.add(vec, figure.position);
-      
-      gameField.set(worldPosition, figure.color);
-    }
-  }
-  
   function getLinesCompletion(gameField) {
     let linesCompletion = new Array(gameField.height);
     
-    gameField.loop((x, y, cell) => {
-      linesCompletion[y] = (linesCompletion[y] || 0);
+    gameField.loop((_, lineIndex, cell) => {
+      linesCompletion[lineIndex] = (linesCompletion[lineIndex] || 0);
       
       if(cell) {
-        linesCompletion[y] = linesCompletion[y] + 1;
+        linesCompletion[lineIndex] = linesCompletion[lineIndex] + 1;
       }
     });
     
     return linesCompletion;
   }
   
-  function removeCompletedLines(gameField) {
-    let linesCompletion = getLinesCompletion(gameField);
-    let newGameField = createGameField(gameField.width, gameField.height);
+  function removeCompletedLines(linesCompletion, gameField) {
+    let newGameField = new GameField(gameField.width, gameField.height);
     let copyIndex = gameField.height - 1; 
     
     for(let lineIndex = linesCompletion.length - 1; lineIndex >= 0; lineIndex--) {
@@ -265,7 +334,7 @@ function tetris(canvasId) {
             this.ticksPassed = 0;
             func();
           } else {
-            this.ticksPassed++;          
+            this.ticksPassed++;
           }
         }
       }
@@ -285,87 +354,96 @@ function tetris(canvasId) {
   }
   
   function update(world, input, animationManager) {
-    let ticksSinceLastFigureFall = world.ticksSinceLastFigureFall;
-    let currentFigure = world.currentFigure;
+    let currentFigure = world.figure;
     let gameField = world.gameField;
     
     input.processInput({
-      ArrowLeft: () => currentFigure = moveFigure(gameField, currentFigure, Vector.directions.left),
-      ArrowRight: () => currentFigure = moveFigure(gameField, currentFigure, Vector.directions.right),
-      ArrowDown: () => currentFigure = moveFigure(gameField, currentFigure, Vector.directions.down),
-      Enter: () => currentFigure = rotateFigure(gameField, currentFigure, -1)
+      ArrowLeft: () => currentFigure = currentFigure.move(gameField, Vector2.directions.left),
+      ArrowRight: () => currentFigure = currentFigure.move(gameField, Vector2.directions.right),
+      ArrowDown: () => currentFigure = currentFigure.move(gameField, Vector2.directions.down),
+      Enter: () => currentFigure = currentFigure.rotate(gameField, -1)
     }, {abortKeys: ["Enter", "ArrowLeft", "ArrowRight"]});
     
     animationManager.animate("figureFall", world.speed,
       () => {
         let oldPosition = currentFigure.position;
         
-        currentFigure = moveFigure(gameField, currentFigure, Vector.directions.down);
+        currentFigure = currentFigure.move(gameField, Vector2.directions.down);
         
-        if(Vector.equal(oldPosition, currentFigure.position)) {
-          // do we need to create new instance of gameField here?
-          landFigure(gameField, currentFigure);
-          currentFigure = createFigure(gameField);
+        if(Vector2.equal(oldPosition, currentFigure.position)) {
+          let worldData = currentFigure.getWorldData();
+
+          if(gameField.hit(worldData)) {
+            console.log("game over");
+            return;
+          }
+
+          gameField = landFigure(gameField, currentFigure);
+          currentFigure = Figure.createRandom(gameField);
         }
       });
 
-    gameField = removeCompletedLines(gameField);
-    
-    return {
-      ...world,
-      ticksSinceLastFigureFall: ticksSinceLastFigureFall,
-      currentFigure: currentFigure,  
-      gameField: gameField,
+    let linesCompletion = getLinesCompletion(gameField);
+
+    if(linesCompletion.some(completion => completion == gameField.width)) {
+      gameField = removeCompletedLines(linesCompletion, gameField);
     }
+
+    return world.createNew(gameField, currentFigure, world.speed);
   }
-  
-  function createRenderCtx(canvasId) {
-    let canvas = document.getElementById(canvasId);
-    let ctx = canvas.getContext('2d');
     
-    return ctx;
-  }
-  
-  function render(world, ctx) {    
+  function render(world, ctx) {   
+    ctx.canvas.width = window.innerWidth;
+    ctx.canvas.height = window.innerHeight;
+    let multiplayer = 0;
+
+    if(ctx.canvas.height / ctx.canvas.width < 2) {
+      multiplayer = Math.floor(ctx.canvas.height / 30);
+    } else {
+      multiplayer = Math.floor(ctx.canvas.width / 15);
+    }
+
     let gameField = world.gameField;
-    let figure = world.currentFigure;
+    let figure = world.figure;
     
     function fillCell(x, y, color) {
       if(!color)
         return;
       
       ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-      ctx.fillRect(x * 10, y * 10, 10, 10);
+      ctx.fillRect(x * multiplayer, y * multiplayer, multiplayer, multiplayer);
     }
     
     ctx.fillStyle = 'rgb(0,0,0)';    
-    ctx.fillRect(0, 0, 10 * world.gameField.width, 10 * world.gameField.height);
+    ctx.fillRect(0, 0, multiplayer * world.gameField.width, multiplayer * world.gameField.height);
 
-    gameField.loop(fillCell);    
+    gameField.loop(fillCell); 
     
     figure.data.forEach(vec => {
-      let worldPosition = Vector.add(vec, figure.position); 
+      let worldPosition = vec.add(figure.position); 
       fillCell(worldPosition.x, worldPosition.y, figure.color);
     });
   }
-  
-  function createWorld(speed, width, height) {
-    let gameField = createGameField(width, height);
+
+  function createWorld() {
+    let gameField = new GameField(15, 30);
+    let figure = Figure.createRandom(gameField);
     
-    return {
-      currentFigure: createFigure(gameField),
-      gameField: gameField,
-      speed: speed
-    }
+    return new GameWorld(gameField, figure, 1);
   }
-    
-  let renderCtx = createRenderCtx(canvasId);
+
+  let renderCtx = canvas.getContext('2d');
   let animationManager = createAnimationManager();
   let input = createInput(animationManager, 25);
-  let world = createWorld(5, 15, 30);
+  let world = createWorld();
   
   setInterval(function() {
     world = update(world, input, animationManager);
-    render(world, renderCtx);
   }, 5);
+
+  setInterval(function() {
+    if(world.needRedraw()) {
+      render(world, renderCtx);
+    }
+  }, 1);
 }

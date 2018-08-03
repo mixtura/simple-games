@@ -5,10 +5,20 @@
     <title>Tetris</title>
     <script src="./tetris.js"></script>
     <style type="text/css">
-      canvas { border: 1px solid black; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0px;
+      border: 0;
+      overflow: hidden; /*  Disable scrollbars */
+      display: block;  /* No floating content on sides */
+    }
     </style>
   </head>
-  <body onload="tetris('tetrisCanvas', 15, 30)">
-    <canvas id="tetrisCanvas" width="150" height="300"></canvas>
+  <body>
+    <canvas id="tetrisCanvas"></canvas>
   </body>
+  <script>
+    tetris(document.getElementById("tetrisCanvas"));
+  </script>
 </html>
