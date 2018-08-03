@@ -225,13 +225,8 @@ let Figure = (function() {
     return figure.rotate(gameField, angle);
   }
 
-  Figure.prototype.move = function(gameField, directionVec) {      
+  Figure.prototype.move = function(directionVec) {      
     let newPosition = this.position.add(directionVec);
-    let worldPositions = this.data.map(vec => vec.add(newPosition));
-
-    if(gameField.hit(worldPositions)) {
-      return this;
-    }
 
     return new Figure(newPosition, this.color, this.data, this.disableRotation);
   }
@@ -242,12 +237,7 @@ let Figure = (function() {
     }
     
     let newData = this.data.map(vec => vec.rotate(angle));
-    let worldPositions = this.getWorldData();
 
-    if(gameField.hit(worldPositions)) {
-      return this;
-    }
-    
     return new Figure(this.position, this.color, newData, this.disableRotation);
   }
 
@@ -301,85 +291,98 @@ function tetris(canvas) {
     return newGameField;
   }
   
-  function createInput(animationManager, speed) {
+  function createInputProcessor(delayer, delay) {
     let toProcess = {};
 
     document.addEventListener("keydown", e => toProcess[e.key] = true);
     document.addEventListener("keyup", e => toProcess[e.key] = false);
 
     return {
-      processInput: function(map, config = {}) {        
-        let actions = Object.keys(toProcess).filter(key => toProcess[key] && map[key]).map(key => ({
-          key: key,
-          action: map[key],
-          abort: (config.abortKeys || []).includes(key)
-        }));
+      process: function(map, config = {}) {        
+        let actions = Object
+          .keys(toProcess)
+          .filter(key => toProcess[key] && map[key])
+          .map(key => ({
+            key: key,
+            action: map[key],
+            abort: (config.abortKeys || []).includes(key)
+          }));
 
         actions.forEach(({key, action, abort}) => 
-          animationManager.animate(key, speed, () => {
+          delayer.delay(key, delay, () => {
             action();
             toProcess[key] = !abort;
-        }));
+          })
+        );
       }
     };
   }
-    
-  function createAnimationManager() {
-    function createAnimation(speed) {
-      return {
-        ticksPassed: 0,
-        speed: speed,
-        animate: function(func) {
-          if(this.ticksPassed > Math.floor(1 / this.speed * 100)) {
-            this.ticksPassed = 0;
-            func();
-          } else {
-            this.ticksPassed++;
-          }
-        }
+
+  function createDelayer() {
+    let delays = {};
+
+    function executeWithDelay(delay, f) {
+      if(delay.ticksPassed > delay.delayVal) {
+        delay.ticksPassed = 0;
+        f();
+      } else {
+        delay.ticksPassed++;
       }
     }
-    
-    return {  
-      animations: {},
-      animate: function(key, speed, f) {
-        if(this.animations[key]) {
-          this.animations[key].animate(f);
+
+    return {
+      delay: function(key, delayVal, f) {
+        if(delays[key]) {
+          executeWithDelay(delays[key], f);
         } else {
-          this.animations[key] = createAnimation(speed);
+          delays[key] = {
+            ticksPassed: 0,
+            delayVal: delayVal 
+          };
+  
           f();
         }
       }
     };
   }
-  
-  function update(world, input, animationManager) {
+
+  function move(gameField, figure, direction) {
+    let movedFigure = figure.move(direction);
+
+    return gameField.hit(movedFigure.getWorldData()) ? figure : movedFigure;
+  }
+
+  function rotate(gameField, figure, angle) {
+    let rotatedFigure = figure.rotate(angle);
+
+    return gameField.hit(rotatedFigure.getWorldData()) ? figure : rotatedFigure;
+  }
+
+  function update(world, input, delayer) {
     let currentFigure = world.figure;
     let gameField = world.gameField;
     
-    input.processInput({
-      ArrowLeft: () => currentFigure = currentFigure.move(gameField, Vector2.directions.left),
-      ArrowRight: () => currentFigure = currentFigure.move(gameField, Vector2.directions.right),
-      ArrowDown: () => currentFigure = currentFigure.move(gameField, Vector2.directions.down),
-      Enter: () => currentFigure = currentFigure.rotate(gameField, -1)
+    input.process({
+      ArrowLeft: () => currentFigure = move(gameField, currentFigure, Vector2.directions.left),
+      ArrowRight: () => currentFigure = move(gameField, currentFigure, Vector2.directions.right),
+      ArrowDown: () => currentFigure = move(gameField, currentFigure, Vector2.directions.down),
+      Enter: () => currentFigure = rotate(gameField, currentFigure, -1)
     }, {abortKeys: ["Enter", "ArrowLeft", "ArrowRight"]});
     
-    animationManager.animate("figureFall", world.speed,
+    delayer.delay("figureFall", Math.floor(100 / world.speed),
       () => {
-        let oldPosition = currentFigure.position;
+        let movedFigure = move(gameField, currentFigure, Vector2.directions.down);
         
-        currentFigure = currentFigure.move(gameField, Vector2.directions.down);
-        
-        if(Vector2.equal(oldPosition, currentFigure.position)) {
-          let worldData = currentFigure.getWorldData();
-
-          if(gameField.hit(worldData)) {
+        if(currentFigure == movedFigure) {
+          if(gameField.hit(currentFigure.getWorldData())) {
             console.log("game over");
             return;
           }
 
           gameField = landFigure(gameField, currentFigure);
           currentFigure = Figure.createRandom(gameField);
+        } else {
+          currentFigure = movedFigure;
         }
       });
 
@@ -433,12 +436,12 @@ function tetris(canvas) {
   }
 
   let renderCtx = canvas.getContext('2d');
-  let animationManager = createAnimationManager();
-  let input = createInput(animationManager, 25);
+  let delayer = createDelayer();
+  let input = createInputProcessor(delayer, 5);
   let world = createWorld();
   
   setInterval(function() {
-    world = update(world, input, animationManager);
+    world = update(world, input, delayer);
   }, 5);
 
   setInterval(function() {
