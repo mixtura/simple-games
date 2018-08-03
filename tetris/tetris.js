@@ -398,27 +398,23 @@ function tetris(canvas) {
   function render(world, ctx) {   
     ctx.canvas.width = window.innerWidth;
     ctx.canvas.height = window.innerHeight;
-    let multiplayer = 0;
-
-    if(ctx.canvas.height / ctx.canvas.width < 2) {
-      multiplayer = Math.floor(ctx.canvas.height / 30);
-    } else {
-      multiplayer = Math.floor(ctx.canvas.width / 15);
-    }
-
+    
     let gameField = world.gameField;
     let figure = world.figure;
+
+    let multiplayer = Math.floor(ctx.canvas.height / gameField.height);
+    let shift = (ctx.canvas.width - multiplayer * gameField.width) / 2;
     
     function fillCell(x, y, color) {
       if(!color)
         return;
       
       ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-      ctx.fillRect(x * multiplayer, y * multiplayer, multiplayer, multiplayer);
+      ctx.fillRect(x * multiplayer + shift, y * multiplayer, multiplayer, multiplayer);
     }
     
     ctx.fillStyle = 'rgb(0,0,0)';    
-    ctx.fillRect(0, 0, multiplayer * world.gameField.width, multiplayer * world.gameField.height);
+    ctx.fillRect(shift, 0, multiplayer * world.gameField.width, multiplayer * world.gameField.height);
 
     gameField.loop(fillCell); 
     
