@@ -1,5 +1,5 @@
 let Vector2 = (function() {
-  let Vector2 = function(x, y) {
+  function Vector2(x, y) {
     this.x = x;
     this.y = y;
   }
@@ -41,7 +41,7 @@ let Vector2 = (function() {
 })();
 
 let GameField = (function() {  
-  let GameField = function() {
+  function GameField() {
     var args = Array.prototype.slice.call(arguments);
 
     if(args.length == 1) {
@@ -113,7 +113,7 @@ let GameField = (function() {
 })();
 
 let GameWorld = (function() {
-  let GameWorld = function(gameField, figure, speed) {
+  function GameWorld(gameField, figure, speed) {
     this.gameField = gameField;
     this.figure = figure;
     this.speed = speed;
@@ -207,7 +207,7 @@ let Figure = (function() {
     return arr[index];
   }
 
-  let Figure = function(position, color, data, disableRotation) {
+  function Figure(position, color, data, disableRotation) {
     this.position = position;
     this.color = color;
     this.data = data;
