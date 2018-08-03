@@ -222,7 +222,7 @@ let Figure = (function() {
     let data = type.data.map(vec => new Vector2(vec.x, vec.y));
     let figure = new Figure(position, color, data, type.disableRotation);
     
-    return figure.rotate(gameField, angle);
+    return figure.rotate(angle);
   }
 
   Figure.prototype.move = function(directionVec) {      
@@ -231,7 +231,7 @@ let Figure = (function() {
     return new Figure(newPosition, this.color, this.data, this.disableRotation);
   }
   
-  Figure.prototype.rotate = function(gameField, angle) {  
+  Figure.prototype.rotate = function(angle) {  
     if(this.disableRotation) {
       return this;
     }
