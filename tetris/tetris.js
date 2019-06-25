@@ -113,27 +113,22 @@ let GameField = (function() {
 })();
 
 let GameWorld = (function() {
-  function GameWorld(gameField, figure, speed) {
+  function GameWorld(gameField, figure, speed, gameOver) {
     this.gameField = gameField;
     this.figure = figure;
     this.speed = speed;
-
-    this.oldGameField = this.gameField;
-    this.oldFigure = this.figure;
+    this.gameOver = gameOver;
+    this.needRedraw = false;
   }
 
-  GameWorld.prototype.needRedraw = function() {
-    return this.oldGameField != this.gameField || this.oldFigure != this.figure;  
-  }
-
-  GameWorld.prototype.createNew = function(gameField, figure, speed) {
+  GameWorld.prototype.createNew = function(gameField, figure, speed, gameOver) {
     var oldGameField = this.gameField;
     var oldFigure = this.figure;
+    var oldGameOverState = this.gameOver; 
 
-    var gameWorld = new GameWorld(gameField, figure, speed);
+    var gameWorld = new GameWorld(gameField, figure, speed, gameOver);
 
-    gameWorld.oldGameField = oldGameField;
-    gameWorld.oldFigure = oldFigure;
+    gameWorld.needRedraw = oldFigure != figure || oldGameField != gameField || oldGameOverState != gameOver;
 
     return gameWorld;
   }
@@ -223,13 +218,13 @@ let Figure = (function() {
     let figure = new Figure(position, color, data, type.disableRotation);
     
     return figure.rotate(angle);
-  }
+  };
 
   Figure.prototype.move = function(directionVec) {      
     let newPosition = this.position.add(directionVec);
 
     return new Figure(newPosition, this.color, this.data, this.disableRotation);
-  }
+  };
   
   Figure.prototype.rotate = function(angle) {  
     if(this.disableRotation) {
@@ -239,11 +234,11 @@ let Figure = (function() {
     let newData = this.data.map(vec => vec.rotate(angle));
 
     return new Figure(this.position, this.color, newData, this.disableRotation);
-  }
+  };
 
   Figure.prototype.getWorldData = function() {
     return this.data.map(vec => vec.add(this.position));
-  }
+  };
 
   return Figure;
 })();
@@ -359,9 +354,18 @@ function tetris(canvas) {
   }
 
   function update(world, input, delayer) {
+    if(!world) {
+      return createWorld();
+    }
+
     let currentFigure = world.figure;
     let gameField = world.gameField;
-    
+    let gameOver = world.gameOver;
+
+    if(gameOver) {
+      return world;
+    }
+
     input.process({
       ArrowLeft: () => currentFigure = move(gameField, currentFigure, Vector2.directions.left),
       ArrowRight: () => currentFigure = move(gameField, currentFigure, Vector2.directions.right),
@@ -375,7 +379,7 @@ function tetris(canvas) {
         
         if(currentFigure == movedFigure) {
           if(gameField.hit(currentFigure.getWorldData())) {
-            console.log("game over");
+            gameOver = true;
             return;
           }
 
@@ -392,7 +396,7 @@ function tetris(canvas) {
       gameField = removeCompletedLines(linesCompletion, gameField);
     }
 
-    return world.createNew(gameField, currentFigure, world.speed);
+    return world.createNew(gameField, currentFigure, world.speed, gameOver);
   }
     
   function render(world, ctx) {   
@@ -422,13 +426,40 @@ function tetris(canvas) {
       let worldPosition = vec.add(figure.position); 
       fillCell(worldPosition.x, worldPosition.y, figure.color);
     });
+
+    if(world.gameOver) {
+      let skeleton = [
+        [0, 0, 1, 1, 1, 1, 1, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 1, 0],
+        [1, 0, 1, 1, 0, 1, 1, 0, 1],
+        [1, 0, 1, 1, 0, 1, 1, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1, 0, 0, 0, 1],
+        [0, 1, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 1, 1, 1, 1, 1, 0, 0],
+        [0, 0, 1, 0, 1, 0, 1, 0, 0], 
+      ];
+
+      let shiftX = Math.floor(gameField.width / 2) - Math.floor(skeleton[0].length / 2);
+      let shiftY = Math.floor(gameField.height / 2) - Math.floor(skeleton.length / 2);
+
+      for(var line in skeleton) {
+        for(var col in skeleton[line]) {
+          if(skeleton[line][col]) {
+            fillCell(Number(col) + shiftX, Number(line) + shiftY, [255, 255, 255]);
+          } else {
+            fillCell(Number(col) + shiftX, Number(line) + shiftY, [0, 0, 0]);
+          }
+        }
+      }
+    }
   }
 
   function createWorld() {
     let gameField = new GameField(15, 30);
     let figure = Figure.createRandom(gameField);
     
-    return new GameWorld(gameField, figure, 1);
+    return new GameWorld(gameField, figure, 5);
   }
 
   let renderCtx = canvas.getContext('2d');
@@ -441,7 +472,7 @@ function tetris(canvas) {
   }, 5);
 
   setInterval(function() {
-    if(world.needRedraw()) {
+    if(world.needRedraw) {
       render(world, renderCtx);
     }
   }, 1);
