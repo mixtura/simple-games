@@ -89,47 +89,63 @@ Word.prototype.getExistingBlocks = function() {
 	return this.blocks.filter((_, blockIndex) => this.absentBlockIndexes.indexOf(blockIndex) < 0);
 }
 
+Word.prototype.removeFromAbsent = function(blocks) {
+	var newAbsentBlocks = this.getAbsentBlocks().filter(b1 => !blocks.some(b2 => b1.equals(b2)));
+	var newAbsentBlockIndexes = newAbsentBlocks.map(b => this.blocks.indexOf(b));
+	
+	return new Word(this.blocks, newAbsentBlockIndexes, this.color);
+}
+
+Word.prototype.addToAbsent = function(blocksToAdd) {
+	var newAbsentBlockIndexes = this.getExistingBlocks()
+		.filter(b1 => blocksToAdd.some(b2 => b1.equals(b2)))
+		.map(b => this.blocks.indexOf(b))
+		.concat(this.absentBlockIndexes);
+		
+	return new Word(this.blocks, newAbsentBlockIndexes, this.color);
+}
+
 function snakeGame() {	
 	let snake = new Snake([
-		new Block(new Vector(0, 0), 'g'),
-		new Block(new Vector(1, 0), 'r'),
-		new Block(new Vector(2, 0), 'e'),
-		new Block(new Vector(3, 0), 'e'),
-		new Block(new Vector(4, 0), 'n'),
+		new Block(new Vector(0, 0), 'G'),
+		new Block(new Vector(1, 0), 'R'),
+		new Block(new Vector(2, 0), 'E'),
+		new Block(new Vector(3, 0), 'E'),
+		new Block(new Vector(4, 0), 'N'),
 	], 'green');
 	
 	let wordRed = new Word(
-		[new Block(new Vector(10, 15), 'r'),
-		 new Block(new Vector(11, 15), 'e'),
-		 new Block(new Vector(12, 15), 'd')],
+		[new Block(new Vector(10, 15), 'R'),
+		 new Block(new Vector(11, 15), 'E'),
+		 new Block(new Vector(12, 15), 'D')],
 		[1],
 		'red'
 	);
 	
 	let wordNavy = new Word(
-		[new Block(new Vector(10, 10), 'n'),
-		 new Block(new Vector(10, 11), 'a'),
-		 new Block(new Vector(10, 12), 'v'),
-		 new Block(new Vector(10, 13), 'y')],
+		[new Block(new Vector(8, 9), 'N'),
+		 new Block(new Vector(8, 10), 'A'),
+		 new Block(new Vector(8, 11), 'V'),
+		 new Block(new Vector(8, 12), 'Y')],
 		[3],
 		'#001f3f'
 	);
 	
 	let xWord = new Word(
-		[new Block(new Vector(5, 11), 'b'),
-		 new Block(new Vector(5, 12), 'l'),
-		 new Block(new Vector(5, 13), 'a'),
-		 new Block(new Vector(5, 14), 'c'),
-		 new Block(new Vector(6, 14), 'k')		
-		], [2], 'black');
+		[new Block(new Vector(5, 11), 'B'),
+		 new Block(new Vector(5, 12), 'L'),
+		 new Block(new Vector(5, 13), 'A'),
+		 new Block(new Vector(5, 14), 'C'),
+		 new Block(new Vector(6, 14), 'K')		
+		], [1, 2], 'black');
 	
 	let wordYellow = new Word(
-		[new Block(new Vector(5, 10), 'y'),
-		 new Block(new Vector(6, 10), 'e'),
-		 new Block(new Vector(7, 10), 'l'),
-		 new Block(new Vector(7, 11), 'l'),
-		 new Block(new Vector(7, 12), 'o'),
-		 new Block(new Vector(6, 12), 'w')],
+		[new Block(new Vector(5, 10), 'Y'),
+		 new Block(new Vector(6, 10), 'E'),
+		 new Block(new Vector(7, 10), 'L'),
+		 new Block(new Vector(7, 11), 'L'),
+		 new Block(new Vector(7, 12), 'O'),
+		 new Block(new Vector(6, 12), 'W')],
 		[1],
 		'yellow'
 	);
@@ -176,7 +192,8 @@ function snakeGame() {
 							snake.blocks, 
 							snake.getBlockIndexes(word.getAbsentBlocks()), 
 							snake.color) 
-						: w
+						: w.removeFromAbsent(snake.blocks)
+						   .addToAbsent(word.blocks)
 					);
 					
 					return {snake: newSnake, words: newWords};
@@ -197,7 +214,7 @@ function snakeGame() {
 			canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
 			
 			for(let block of snake.blocks) {			
-				canvasCtx.fillText(block.letter, block.position.x * scale + scale / 3.5, block.position.y * scale + scale / 1.2);
+				canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
 				canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
 			}
 			
