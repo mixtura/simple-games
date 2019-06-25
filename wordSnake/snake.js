@@ -53,14 +53,14 @@ Snake.prototype.move = function(vec){
 	return new Snake(newBlocks, this.color);
 };
 
-Snake.prototype.createWord = function(absentBlocks) {
-	var absentBlockIndexes = absentBlocks.map(absentBlock => {
-		var newAbsentBlock = this.blocks.find(b => b.equals(absentBlock));
+Snake.prototype.getBlockIndexes = function(blocksToFind) {
+	var blockIndexes = blocksToFind.map(absentBlock => {
+		var foundBlock = this.blocks.find(b => b.equals(absentBlock));
 		
-		return this.blocks.indexOf(newAbsentBlock);
+		return this.blocks.indexOf(foundBlock);
 	});
 	
-	return new Word(this.blocks, absentBlockIndexes, this.color);
+	return blockIndexes;
 }
 
 function Word(blocks, absentBlockIndexes, color) {	
@@ -69,27 +69,17 @@ function Word(blocks, absentBlockIndexes, color) {
 	this.color = color;
 }
 
-Word.prototype.createSnake = function(snakeBlocks) {
+Word.prototype.complete = function(completionBlocks) {
 	if(this.absentBlockIndexes.length == 0) {
-		return null;
+		return false;
 	}
 	
-	for(let block of this.getAbsentBlocks()) {
-		let blockFound = false;
-		for(let snakeBlock of snakeBlocks) {
-			if(snakeBlock.equals(block)) {
-				blockFound = true;
-				break;
-			}
-		}
-		
-		if(!blockFound) {
-			return null;
-		}
-	}
-	
-	return new Snake(this.blocks, this.color);
+	return this.getAbsentBlocks().every(b1 => completionBlocks.some(b2 => b2.equals(b1)));
 };
+
+Word.prototype.intersect = function(blocks) {
+	return this.getExistingBlocks().some(b1 => blocks.some(b2 => b1.position.equals(b2.position)));	
+}
 
 Word.prototype.getAbsentBlocks = function() {
 	return this.blocks.filter((_, blockIndex) => this.absentBlockIndexes.indexOf(blockIndex) >= 0);
@@ -102,16 +92,16 @@ Word.prototype.getExistingBlocks = function() {
 function snakeGame() {	
 	let snake = new Snake([
 		new Block(new Vector(0, 0), 'g'),
-		new Block(new Vector(0, 0), 'r'),
-		new Block(new Vector(0, 0), 'e'),
-		new Block(new Vector(0, 0), 'e'),
-		new Block(new Vector(0, 0), 'n'),
+		new Block(new Vector(1, 0), 'r'),
+		new Block(new Vector(2, 0), 'e'),
+		new Block(new Vector(3, 0), 'e'),
+		new Block(new Vector(4, 0), 'n'),
 	], 'green');
 	
 	let wordRed = new Word(
-		[new Block(new Vector(5, 10), 'r'),
-		 new Block(new Vector(6, 10), 'e'),
-		 new Block(new Vector(7, 10), 'd')],
+		[new Block(new Vector(10, 15), 'r'),
+		 new Block(new Vector(11, 15), 'e'),
+		 new Block(new Vector(12, 15), 'd')],
 		[1],
 		'red'
 	);
@@ -126,15 +116,20 @@ function snakeGame() {
 	);
 	
 	let xWord = new Word(
-		[new Block(new Vector(5, 16), 'x')], [], 'black');
+		[new Block(new Vector(5, 11), 'b'),
+		 new Block(new Vector(5, 12), 'l'),
+		 new Block(new Vector(5, 13), 'a'),
+		 new Block(new Vector(5, 14), 'c'),
+		 new Block(new Vector(6, 14), 'k')		
+		], [2], 'black');
 	
 	let wordYellow = new Word(
-		[new Block(new Vector(5, 15), 'y'),
-		 new Block(new Vector(6, 15), 'e'),
-		 new Block(new Vector(7, 15), 'l'),
-		 new Block(new Vector(7, 16), 'l'),
-		 new Block(new Vector(7, 17), 'o'),
-		 new Block(new Vector(6, 17), 'w')],
+		[new Block(new Vector(5, 10), 'y'),
+		 new Block(new Vector(6, 10), 'e'),
+		 new Block(new Vector(7, 10), 'l'),
+		 new Block(new Vector(7, 11), 'l'),
+		 new Block(new Vector(7, 12), 'o'),
+		 new Block(new Vector(6, 12), 'w')],
 		[1],
 		'yellow'
 	);
@@ -159,31 +154,39 @@ function snakeGame() {
 		}
 		
 		function updateWordAndSnake(snake, words) {
-			for(let word of words) {
-				let newSnake = word.createSnake(snake.blocks);
-				
-				if(newSnake) {
-					let newWords = words.map(w => {
-						if(w == word) {
-							return snake.createWord(word.getAbsentBlocks());
-						}
-						
-						return w;
-					});
-					
-					return {snake: newSnake, words: newWords};
-				}
+			let backfallResult = {snake, words};
+			let moveVec = getMoveVec(e.keyCode);
+		
+			if(!moveVec) {
+				return backfallResult;
 			}
 			
-			return {snake, words}
-		}
-		
-		let moveVec = getMoveVec(e.keyCode);
-		
-		if(moveVec) {
 			snake = snake.move(moveVec);
-			({snake, words} = updateWordAndSnake(snake, words));			
+			
+			if(words.some(w => w.intersect(snake.blocks))) {
+				return backfallResult;
+			}
+						
+			for(let word of words) {
+				if(word.complete(snake.blocks)){
+					let newSnake = new Snake(word.blocks, word.color);
+					let newWords = words.map(w => 
+						w == word 
+						? new Word(
+							snake.blocks, 
+							snake.getBlockIndexes(word.getAbsentBlocks()), 
+							snake.color) 
+						: w
+					);
+					
+					return {snake: newSnake, words: newWords};
+				}			
+			}
+			
+			return {snake, words};
 		}
+		
+		({snake, words} = updateWordAndSnake(snake, words));
 	});
 
 	setInterval(function() {
@@ -194,7 +197,7 @@ function snakeGame() {
 			canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
 			
 			for(let block of snake.blocks) {			
-				canvasCtx.fillText(block.letter, block.position.x * scale + scale / 3.5, block.position.y * scale + scale / 1.3);
+				canvasCtx.fillText(block.letter, block.position.x * scale + scale / 3.5, block.position.y * scale + scale / 1.2);
 				canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
 			}
 			
