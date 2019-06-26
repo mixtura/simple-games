@@ -131,7 +131,7 @@ function snakeGame() {
 		'#001f3f'
 	);
 	
-	let xWord = new Word(
+	let wordBlack = new Word(
 		[new Block(new Vector(5, 11), 'B'),
 		 new Block(new Vector(5, 12), 'L'),
 		 new Block(new Vector(5, 13), 'A'),
@@ -150,7 +150,32 @@ function snakeGame() {
 		'yellow'
 	);
 	
-	let words = [wordRed, wordYellow, wordNavy, xWord];
+	let wordBlue = new Word(
+		[new Block(new Vector(20, 2), 'B'),
+		 new Block(new Vector(21, 2), 'L'),
+		 new Block(new Vector(22, 2), 'U'),
+		 new Block(new Vector(23, 2), 'E')],
+		[0],
+		'blue'	
+	);
+	
+	let wordUltraviolet = new Word(
+		[new Block(new Vector(18, 6), 'U'),
+		 new Block(new Vector(18, 5), 'L'),
+		 new Block(new Vector(18, 4), 'T'),
+		 new Block(new Vector(19, 4), 'R'),
+		 new Block(new Vector(20, 4), 'A'),
+		 new Block(new Vector(20, 5), 'V'),
+		 new Block(new Vector(20, 6), 'I'),
+		 new Block(new Vector(21, 6), 'O'),
+		 new Block(new Vector(22, 6), 'L'),
+		 new Block(new Vector(22, 5), 'E'),
+		 new Block(new Vector(22, 4), 'T')],
+		[0, 4],
+		'#7f1ae5'
+	); 
+	
+	let words = [wordRed, wordYellow, wordNavy, wordBlack, wordBlue, wordUltraviolet];
 	let previousSnake = null;
 	let scale = 20;
 	let canvasCtx = document.getElementById("canvas").getContext('2d');
@@ -216,6 +241,7 @@ function snakeGame() {
 			for(let block of snake.blocks) {			
 				canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
 				canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
+				canvasCtx.fillRect(block.position.x * scale, block.position.y * scale + scale, scale, 2);
 			}
 			
 			for(let word of words) {				
