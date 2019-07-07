@@ -105,6 +105,36 @@ Word.prototype.addToAbsent = function(blocksToAdd) {
 	return new Word(this.blocks, newAbsentBlockIndexes, this.color);
 }
 
+function Border(color, line) {
+	this.color = color;
+	this.line = line;
+}
+
+Border.prototype.getOcuppiedCells = function() {
+	var cells = [];
+	
+	cells.push(this.line[0]);
+
+	for(var point of this.line.splice(1)) {
+		do {
+			var previousCell = cells[cells.length - 1];
+			var dx = previousCell.x - point.x;
+			var dy = previousCell.y - point.y;
+
+			var newCell = new Vector(
+				previousCell.x + Math.sign(dx), 
+				previousCell.y + Math.sign(dy));
+
+			cells.push(newCell);
+						
+		} while(dx != 0 && dy != 0)
+	}
+}
+
+Border.prototype.cross = function(color) {
+	return this.color == color;
+}
+
 function snakeGame() {	
 	let snake = new Snake([
 		new Block(new Vector(0, 0), 'G'),
