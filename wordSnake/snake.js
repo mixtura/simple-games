@@ -1,147 +1,142 @@
-function Vector(x, y) {
-	this.x = x;
-	this.y = y;
+class Vector {
+	constructor(x, y) {
+		this.x = x;
+		this.y = y;
+	}
+
+	add(vec) {
+		return new Vector(this.x + vec.x, this.y + vec.y);
+	}
+
+	equals(vec) {
+		return this.x === vec.x && this.y === vec.y;
+	}
 }
 
-Vector.prototype.add = function(vec) {
-	return new Vector(this.x + vec.x, this.y + vec.y)
-}
+class Block {
+	constructor(position, letter) {
+		this.position = position;
+		this.letter = letter;
+	}
 
-Vector.prototype.equals = function(vec) {
-	return this.x === vec.x && this.y === vec.y;
-}
+	move(vec) {
+		return new Block(this.position.add(vec), this.letter);
+	}
 
-function Block(position, letter) {
-	this.position = position;
-	this.letter = letter;
-}
-
-Block.prototype.move = function(vec) {
-	return new Block(this.position.add(vec), this.letter);
-}
-
-Block.prototype.translate = function(vec) {
-	return new Block(vec, this.letter);
-}
-
-Block.prototype.equals = function(block) {
-	return this.position.equals(block.position) && this.letter === block.letter;
-}
-
-function Snake (blocks, color) {	
-	this.blocks = blocks;
-	this.color = color;
-}
-
-Snake.prototype.move = function(vec){
-	let firstNewBlock = this.blocks[0].move(vec);
+	translate(vec) {
+		return new Block(vec, this.letter);
+	}
 	
-	for(let block of this.blocks) {
-		if(block.position.equals(firstNewBlock.position)) {
-			return this;
+	equals(block) {
+		return this.position.equals(block.position) && this.letter === block.letter;
+	}
+}
+
+class Snake {
+	constructor(blocks, color) {
+		this.blocks = blocks;
+		this.color = color;
+	}
+
+	move(vec) {
+		let firstNewBlock = this.blocks[0].move(vec);
+		for (let block of this.blocks) {
+			if (block.position.equals(firstNewBlock.position)) {
+				return this;
+			}
 		}
+		let newBlocks = [firstNewBlock];
+		for (let index = 1; index < this.blocks.length; index++) {
+			let oldBlock = this.blocks[index - 1];
+			let blockToTranslate = this.blocks[index];
+			newBlocks.push(blockToTranslate.translate(oldBlock.position));
+		}
+		return new Snake(newBlocks, this.color);
 	}
-	
-	let newBlocks = [firstNewBlock];	
-	for(let index = 1; index < this.blocks.length; index++) {
-		let oldBlock = this.blocks[index - 1];
-		let blockToTranslate = this.blocks[index];
-		
-		newBlocks.push(blockToTranslate.translate(oldBlock.position));
-	}
-	
-	return new Snake(newBlocks, this.color);
-};
 
-Snake.prototype.getBlockIndexes = function(blocksToFind) {
-	var blockIndexes = blocksToFind.map(absentBlock => {
-		var foundBlock = this.blocks.find(b => b.equals(absentBlock));
-		
-		return this.blocks.indexOf(foundBlock);
-	});
-	
-	return blockIndexes;
-}
-
-function Word(blocks, absentBlockIndexes, color) {	
-	this.blocks = blocks;
-	this.absentBlockIndexes = absentBlockIndexes;
-	this.color = color;
-}
-
-Word.prototype.complete = function(completionBlocks) {
-	if(this.absentBlockIndexes.length == 0) {
-		return false;
-	}
-	
-	return this.getAbsentBlocks().every(b1 => completionBlocks.some(b2 => b2.equals(b1)));
-};
-
-Word.prototype.intersect = function(blocks) {
-	return this.getExistingBlocks().some(b1 => blocks.some(b2 => b1.position.equals(b2.position)));	
-}
-
-Word.prototype.getAbsentBlocks = function() {
-	return this.blocks.filter((_, blockIndex) => this.absentBlockIndexes.indexOf(blockIndex) >= 0);
-}
-
-Word.prototype.getExistingBlocks = function() {
-	return this.blocks.filter((_, blockIndex) => this.absentBlockIndexes.indexOf(blockIndex) < 0);
-}
-
-Word.prototype.removeFromAbsent = function(blocks) {
-	var newAbsentBlocks = this.getAbsentBlocks().filter(b1 => !blocks.some(b2 => b1.equals(b2)));
-	var newAbsentBlockIndexes = newAbsentBlocks.map(b => this.blocks.indexOf(b));
-	
-	return new Word(this.blocks, newAbsentBlockIndexes, this.color);
-}
-
-Word.prototype.addToAbsent = function(blocksToAdd) {
-	var newAbsentBlockIndexes = this.getExistingBlocks()
-		.filter(b1 => blocksToAdd.some(b2 => b1.equals(b2)))
-		.map(b => this.blocks.indexOf(b))
-		.concat(this.absentBlockIndexes);
-		
-	return new Word(this.blocks, newAbsentBlockIndexes, this.color);
-}
-
-function Border(color, line) {
-	this.color = color;
-	this.line = line;
-}
-
-Border.prototype.getOcuppiedCells = function() {
-	var cells = [];
-	
-	cells.push(this.line[0]);
-
-	for(var point of this.line.splice(1)) {
-		do {
-			var previousCell = cells[cells.length - 1];
-			var dx = previousCell.x - point.x;
-			var dy = previousCell.y - point.y;
-
-			var newCell = new Vector(
-				previousCell.x + Math.sign(dx), 
-				previousCell.y + Math.sign(dy));
-
-			cells.push(newCell);
-						
-		} while(dx != 0 && dy != 0)
+	getBlockIndexes(blocksToFind) {
+		var blockIndexes = blocksToFind.map(absentBlock => {
+			var foundBlock = this.blocks.find(b => b.equals(absentBlock));
+			return this.blocks.indexOf(foundBlock);
+		});
+		return blockIndexes;
 	}
 }
 
-Border.prototype.cross = function(color) {
-	return this.color == color;
+class Word {
+	constructor(blocks, absentBlockIndexes, color) {
+		this.blocks = blocks;
+		this.absentBlockIndexes = absentBlockIndexes;
+		this.color = color;
+	}
+
+	complete(completionBlocks) {
+		if (this.absentBlockIndexes.length == 0) {
+			return false;
+		}
+		return this.getAbsentBlocks().every(b1 => completionBlocks.some(b2 => b2.equals(b1)));
+	}
+
+	intersect(block) {
+		return this.getExistingBlocks().some(b => b.position.equals(block.position));
+	}
+
+	getAbsentBlocks() {
+		return this.blocks.filter((_, blockIndex) => this.absentBlockIndexes.indexOf(blockIndex) >= 0);
+	}
+
+	getExistingBlocks() {
+		return this.blocks.filter((_, blockIndex) => this.absentBlockIndexes.indexOf(blockIndex) < 0);
+	}
+
+	removeFromAbsent(blocks) {
+		var newAbsentBlocks = this.getAbsentBlocks().filter(b1 => !blocks.some(b2 => b1.equals(b2)));
+		var newAbsentBlockIndexes = newAbsentBlocks.map(b => this.blocks.indexOf(b));
+		return new Word(this.blocks, newAbsentBlockIndexes, this.color);
+	}
+
+	addToAbsent(blocksToAdd) {
+		var newAbsentBlockIndexes = this.getExistingBlocks()
+			.filter(b1 => blocksToAdd.some(b2 => b1.equals(b2)))
+			.map(b => this.blocks.indexOf(b))
+			.concat(this.absentBlockIndexes);
+		return new Word(this.blocks, newAbsentBlockIndexes, this.color);
+	}
+}
+
+class Border {
+	constructor(color, line) {
+		this.color = color;
+		this.line = line;
+	}
+
+	getOcuppiedCells() {
+		var cells = [];
+		cells.push(this.line[0]);
+		for (var point of this.line.slice(1, this.line.length)) {
+			do {
+				var previousCell = cells[cells.length - 1];
+				var dx = previousCell.x - point.x;
+				var dy = previousCell.y - point.y;
+				var newCell = new Vector(previousCell.x - Math.sign(dx), previousCell.y - Math.sign(dy));
+				cells.push(newCell);
+			} while (dx != 0 || dy != 0);
+		}
+		return cells;
+	}
+
+	cross(color, pos) {
+		return this.color != color && this.getOcuppiedCells().some(cell => cell.equals(pos));
+	}
 }
 
 function snakeGame() {	
 	let snake = new Snake([
-		new Block(new Vector(0, 0), 'G'),
-		new Block(new Vector(1, 0), 'R'),
-		new Block(new Vector(2, 0), 'E'),
-		new Block(new Vector(3, 0), 'E'),
-		new Block(new Vector(4, 0), 'N'),
+		new Block(new Vector(1, 1), 'G'),
+		new Block(new Vector(2, 1), 'R'),
+		new Block(new Vector(3, 1), 'E'),
+		new Block(new Vector(4, 1), 'E'),
+		new Block(new Vector(5, 1), 'N'),
 	], 'green');
 	
 	let wordRed = new Word(
@@ -204,7 +199,11 @@ function snakeGame() {
 		[0, 4],
 		'#7f1ae5'
 	); 
+
+	let borderUltraviolet = new Border('#7f1ae5', [new Vector(0, 20), new Vector(25, 20)]);
+	let borderPink = new Border('pink', [new Vector(0, 0), new Vector(24, 0), new Vector(24, 24), new Vector(0, 24), new Vector(0, 0)]);
 	
+	let borders = [borderUltraviolet, borderPink];
 	let words = [wordRed, wordYellow, wordNavy, wordBlack, wordBlue, wordUltraviolet];
 	let previousSnake = null;
 	let scale = 20;
@@ -234,10 +233,14 @@ function snakeGame() {
 			
 			snake = snake.move(moveVec);
 			
-			if(words.some(w => w.intersect(snake.blocks))) {
+			if(words.some(w => w.intersect(snake.blocks[0]))) {
 				return backfallResult;
 			}
-						
+
+			if(borders.some(b => b.cross(snake.color, snake.blocks[0].position))) {
+				return backfallResult;
+			}
+
 			for(let word of words) {
 				if(word.complete(snake.blocks)){
 					let newSnake = new Snake(word.blocks, word.color);
@@ -279,6 +282,19 @@ function snakeGame() {
 				for(let block of word.getExistingBlocks()) {				
 					canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
 				}
+			}
+
+			for(let border of borders) {
+				canvasCtx.strokeStyle = border.color;
+				canvasCtx.beginPath();
+				canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
+
+				for(let point of border.line.slice(1, border.line.length)) {
+					canvasCtx.lineTo(point.x * scale + scale/2, point.y * scale + scale/2);
+				}
+
+				canvasCtx.closePath();
+				canvasCtx.stroke();
 			}
 			
 			previousSnake = snake;
