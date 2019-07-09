@@ -221,8 +221,30 @@ function getDemoLevel() {
   }
 }
 
+function loadLevel(num) {
+  let levelData = {};
+
+  function mapVectors(vecs) {
+    return vecs.map(mapVector);
+  }
+
+  function mapVector(vec) {
+    return Object.assign(new Vector(), vec);
+  }
+
+  function mapBlocks(blocks) {
+    return blocks.map(b => Object.assign(new Block(), b, {position: mapVector(b.position)}));
+  }
+
+  levelData.words = levels[num].words.slice(1, levels[num].words.length).map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
+  levelData.borders = levels[num].borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
+  levelData.snake = new Snake(mapBlocks(levels[num].words[0].blocks), levels[num].words[0].color);
+
+  return levelData;
+}
+
 function wordSnake() {
-  let level = getDemoLevel();
+  let level = loadLevel(1);
   let previousLevel = null;
   let scale = 20;
   let canvasCtx = document.getElementById("canvas").getContext('2d');
