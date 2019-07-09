@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Word snake editor</title>
+    <script src="./wordSnake.js"></script>
+    <script src="./wordSnakeEditor.js"></script>
+    <style type="text/css">
+      canvas { border: 1px solid black; }
+    </style>
+  </head>
+  <body onload="wordSnakeEditor();">
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div>
+      <label for="activeColor">Active color</label>
+      <input type="color" id="activeColor" name="activeColor" value="#AB0000">
+      <input name="activeColor" value="#AB0000">
+    </div>
+    <h5>Cheatsheat</h5>
+    <div>
+      <p>
+        1 - enable default mode (save)
+      </p>
+      <p>
+        2 - enable word edit mode
+      </p>
+      <p>
+        3 - enable border edit mode 
+      </p>
+    </div>
+    
+    <h5>Level data: </h5>
+    <div id="levelData"></div>
+  </body>
+</html>

@@ -138,7 +138,7 @@ class Border {
   }
 }
 
-function snakeGame() {  
+function getDemoLevel() {
   let snake = new Snake([
     new Block(new Vector(1, 1), 'G'),
     new Block(new Vector(2, 1), 'R'),
@@ -213,7 +213,17 @@ function snakeGame() {
   
   let borders = [borderUltraviolet, borderPink];
   let words = [wordRed, wordYellow, wordNavy, wordBlack, wordBlue, wordUltraviolet];
-  let previousSnake = null;
+
+  return {
+    borders,
+    words,
+    snake
+  }
+}
+
+function wordSnake() {
+  let level = getDemoLevel();
+  let previousLevel = null;
   let scale = 20;
   let canvasCtx = document.getElementById("canvas").getContext('2d');
 
@@ -231,68 +241,68 @@ function snakeGame() {
       }
     }
     
-    function updateWordAndSnake(snake, words) {
-      let backfallResult = {snake, words};
+    function updateLevel(level) {
+      let backfallResult = level;
       let moveVec = getMoveVec(e.keyCode);
     
       if(!moveVec) {
         return backfallResult;
       }
       
-      snake = snake.move(moveVec);
+      let movedSnake = level.snake.move(moveVec);
       
-      if(words.some(w => w.intersect(snake.blocks[0]))) {
+      if(level.words.some(w => w.intersect(movedSnake.blocks[0]))) {
         return backfallResult;
       }
 
-      if(borders.some(b => b.cross(snake.color, snake.blocks[0].position))) {
+      if(level.borders.some(b => b.cross(movedSnake.color, movedSnake.blocks[0].position))) {
         return backfallResult;
       }
 
-      for(let word of words) {
-        if(word.complete(snake.blocks)){
+      for(let word of level.words) {
+        if(word.complete(movedSnake.blocks)){
           let newSnake = new Snake(word.blocks, word.color);
-          let newWords = words.map(w => 
+          let newWords = level.words.map(w => 
             w == word 
             ? new Word(
-              snake.blocks, 
-              snake.getBlockIndexes(word.getAbsentBlocks()), 
-              snake.color) 
-            : w.removeFromAbsent(snake.blocks)
+              movedSnake.blocks, 
+              movedSnake.getBlockIndexes(word.getAbsentBlocks()), 
+              movedSnake.color) 
+            : w.removeFromAbsent(movedSnake.blocks)
                .addToAbsent(word.blocks)
           );
           
-          return {snake: newSnake, words: newWords};
+          return { ...level, snake: newSnake, words: newWords };
         }      
       }
       
-      return {snake, words};
+      return { ...level, snake: movedSnake };
     }
     
-    ({snake, words} = updateWordAndSnake(snake, words));
+    level = updateLevel(level);
   });
 
   setInterval(function() {
-    if(snake != previousSnake) {
+    if(level != previousLevel) {
       canvasCtx.clearRect(0, 0, 500, 500);
-      canvasCtx.fillStyle = snake.color;
-      canvasCtx.strokeStyle = snake.color;
+      canvasCtx.fillStyle = level.snake.color;
+      canvasCtx.strokeStyle = level.snake.color;
       canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
       
-      for(let block of snake.blocks) {      
+      for(let block of level.snake.blocks) {      
         canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
         canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
         canvasCtx.fillRect(block.position.x * scale, block.position.y * scale + scale, scale, 2);
       }
       
-      for(let word of words) {        
+      for(let word of level.words) {        
         canvasCtx.fillStyle = word.color;
         for(let block of word.getExistingBlocks()) {        
           canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
         }
       }
 
-      for(let border of borders) {
+      for(let border of level.borders) {
         canvasCtx.strokeStyle = border.color;
         canvasCtx.beginPath();
         canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
@@ -305,7 +315,7 @@ function snakeGame() {
         canvasCtx.stroke();
       }
       
-      previousSnake = snake;
+      previousLevel = level;
     }
   }, 10);
 }
