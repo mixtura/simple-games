@@ -236,9 +236,9 @@ function loadLevel(num) {
     return blocks.map(b => Object.assign(new Block(), b, {position: mapVector(b.position)}));
   }
 
-  levelData.words = levels[num].words.slice(1, levels[num].words.length).map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
+  levelData.snake = new Snake(mapBlocks(levels[num].snake.blocks), levels[num].snake.color);
+  levelData.words = levels[num].words.map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
   levelData.borders = levels[num].borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
-  levelData.snake = new Snake(mapBlocks(levels[num].words[0].blocks), levels[num].words[0].color);
 
   return levelData;
 }
@@ -318,8 +318,9 @@ function wordSnake() {
       }
       
       for(let word of level.words) {        
-        canvasCtx.fillStyle = word.color;
-        for(let block of word.getExistingBlocks()) {        
+        for(let blockIndex in word.blocks) {
+          let block = word.blocks[blockIndex];        
+          canvasCtx.fillStyle = word.absentBlockIndexes.includes(Number(blockIndex)) ? '#DCDCDC' : word.color;
           canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
         }
       }
@@ -333,7 +334,6 @@ function wordSnake() {
           canvasCtx.lineTo(point.x * scale + scale/2, point.y * scale + scale/2);
         }
 
-        canvasCtx.closePath();
         canvasCtx.stroke();
       }
       

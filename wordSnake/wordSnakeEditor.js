@@ -1,6 +1,7 @@
 let editorMode = {
   none: 'none',
   wordEdit: 'wordEdit',
+  snakeEdit: 'snakeEdit',
   borderEdit: 'borderEdit'
 };
 
@@ -9,17 +10,19 @@ class Editor {
     this.activeCell = new Vector(0, 0);
     this.words = [];
     this.wordCreationMode = false;
-    this.wordBlocks = [];
+    this.blocks = [];
     this.wordAbsentIndexes = [];
     this.borders = [];
     this.borderLine = [];
     this.activeColor = 'red';
     this.activeMode = editorMode.none;
+    this.snake = null;
   }
 
   removeLastEntity() {
     switch(this.activeMode) {
       case editorMode.wordEdit: 
+      case editorMode.snakeEdit:
         this.removeLastWordBlock();
         break;
       case editorMode.borderEdit: 
@@ -36,10 +39,6 @@ class Editor {
   }
 
   removeLastBorderPoint() {
-    if(this.activeMode != editorMode.borderEdit){
-      return;
-    }
-
     this.borderLine.pop();
     
     if(this.borderLine.length != 0) {
@@ -58,18 +57,14 @@ class Editor {
     }
   }
   
-  removeLastWordBlock() {    
-    if(this.activeMode != editorMode.wordEdit){
-      return;
-    }
+  removeLastWordBlock() {
+    let lastWordIndex = () => this.blocks.length - 1;
 
-    let lastWordIndex = () => this.wordBlocks.length - 1;
-
-    this.wordBlocks.splice(lastWordIndex(), 1);
+    this.blocks.splice(lastWordIndex(), 1);
     this.wordAbsentIndexes = this.wordAbsentIndexes.filter(i => i != lastWordIndex());
 
-    if(this.wordBlocks.length != 0) {
-      this.activeCell = this.wordBlocks[lastWordIndex()].position;
+    if(this.blocks.length != 0) {
+      this.activeCell = this.blocks[lastWordIndex()].position;
     }
   }
 
@@ -78,7 +73,7 @@ class Editor {
       return;
     }
 
-    let currentBlockIndex = this.wordBlocks.findIndex(b => b.position.equals(this.activeCell));
+    let currentBlockIndex = this.blocks.findIndex(b => b.position.equals(this.activeCell));
     
     if(currentBlockIndex >= 0) {
       if(this.wordAbsentIndexes.includes(currentBlockIndex)) {
@@ -90,17 +85,17 @@ class Editor {
   }
 
   setBlock(letter) {
-    if(this.activeMode != editorMode.wordEdit){
+    if(this.activeMode != editorMode.wordEdit && this.activeMode != editorMode.snakeEdit){
       return;
     }
 
-    let existingBlockIndex = this.wordBlocks.findIndex(b => b.position.equals(this.activeCell));
+    let existingBlockIndex = this.blocks.findIndex(b => b.position.equals(this.activeCell));
     let newBlock = new Block(this.activeCell, letter);
     
     if(existingBlockIndex >= 0) {
-      this.wordBlocks[existingBlockIndex] = newBlock;
+      this.blocks[existingBlockIndex] = newBlock;
     } else {
-      this.wordBlocks.push(newBlock);
+      this.blocks.push(newBlock);
     }
   }
 
@@ -130,23 +125,44 @@ class Editor {
     }
 
     this.save();
-
     this.activeMode = editorMode.wordEdit;
     
     let existingWord = this.words.find(w => w.blocks.some(b => b.position.equals(this.activeCell)));
     
     if(existingWord != null) {
       this.words = this.words.filter(w => w != existingWord);
-      this.wordBlocks = existingWord.blocks;
+      this.blocks = existingWord.blocks;
       this.wordAbsentIndexes = existingWord.absentBlockIndexes;
       this.activeColor = existingWord.color;
     }
   }
 
+  enableSnakeEdit() {
+    if(this.activeMode == editorMode.snakeEdit) {
+      return;
+    }
+    
+    this.save();
+    this.activeMode = editorMode.snakeEdit;
+
+    if(this.snake != null) {
+      this.blocks = this.snake.blocks;
+      this.activeColor = this.snake.color;
+      this.activeCell = this.snake.blocks[0].position;
+    }
+  }
+
   save() {    
-    if(this.wordBlocks.length) {
-      this.words.push(new Word(this.wordBlocks, this.wordAbsentIndexes, this.activeColor));
-      this.wordBlocks = [];
+    if(this.blocks.length) {
+      if(this.activeMode == editorMode.wordEdit) {
+        this.words.push(new Word(this.blocks, this.wordAbsentIndexes, this.activeColor));
+      } 
+      
+      if(this.activeMode == editorMode.snakeEdit) {
+        this.snake = new Snake(this.blocks, this.activeColor);
+      }
+
+      this.blocks = [];
       this.wordAbsentIndexes = [];
     }
 
@@ -173,9 +189,9 @@ class Editor {
   }
 
   guardDesiredActiveCell(desiredPos) {
-    if(this.activeMode == editorMode.wordEdit) {      
-      let block = this.wordBlocks.find(b => b.position.equals(desiredPos));
-      let activeCellIsTail = this.wordBlocks[this.wordBlocks.length - 1].position.equals(this.activeCell);
+    if(this.activeMode == editorMode.wordEdit || this.activeMode == editorMode.snakeEdit) {      
+      let block = this.blocks.find(b => b.position.equals(desiredPos));
+      let activeCellIsTail = this.blocks[this.blocks.length - 1].position.equals(this.activeCell);
       
       return block || activeCellIsTail ? desiredPos : this.activeCell;
     }
@@ -192,6 +208,7 @@ class Editor {
 
   serializeLevel() {
     let levelData = {
+      snake: this.snake,
       words: this.words,
       borders: this.borders
     };
@@ -204,16 +221,17 @@ function wordSnakeEditor() {
   let editor = new Editor(); 
   let scale = 20;
   let canvasCtx = document.getElementById("canvas").getContext('2d');
+  let activeColorInputs = document.getElementsByName("activeColor");
   let needRedraw = true;
 
-  document.getElementsByName("activeColor").forEach(el => {
+  activeColorInputs.forEach(el => {
     el.addEventListener("change", e => {
       needRedraw = true;
       editor.activeColor = e.target.value;
-      document.getElementsByName("activeColor").forEach(el => el.setAttribute("value", e.target.value));
+      activeColorInputs.forEach(el => el.setAttribute("value", e.target.value));
       e.target.blur();
     });
-  })
+  });
 
   document.addEventListener("keydown", e => {
     needRedraw = true;
@@ -238,6 +256,9 @@ function wordSnakeEditor() {
         editor.enableWordEdit();
         break;        
       case 51: // 3
+        editor.enableSnakeEdit();
+        break;        
+      case 52: // 4
         editor.enableBorderEdit();
         break;
       case 13: // enter
@@ -256,24 +277,27 @@ function wordSnakeEditor() {
     }
   });
 
+  // Rendering shit
   window.setInterval(function() {
     if(!needRedraw) {
       return;
     }
-    
+
+    // flash
     canvasCtx.clearRect(0, 0, 500, 500);
     canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
-    canvasCtx.strokeStyle = editor.activeMode == editorMode.none ? 'gray' : 'red';
-
-    if(editor.activeMode == editorMode.wordEdit || editor.activeMode == editorMode.none) {
-      canvasCtx.strokeRect(editor.activeCell.x * scale, editor.activeCell.y * scale, scale, scale);
-    } else {
-      canvasCtx.beginPath();
-      canvasCtx.arc(editor.activeCell.x * scale + scale/2, editor.activeCell.y * scale + scale/2, scale/4, 0, Math.PI * 2);
-      canvasCtx.closePath();
-      canvasCtx.fill();
+    
+    // saved snake
+    if(editor.snake) {
+      canvasCtx.fillStyle = editor.snake.color;
+      canvasCtx.strokeStyle = editor.snake.color;
+      for(let block of editor.snake.blocks) {
+        canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
+        canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
+      }
     }
 
+    // saved words
     for(let word of editor.words) {
       for(let blockIndex in word.blocks) {
         let block = word.blocks[blockIndex];
@@ -284,6 +308,7 @@ function wordSnakeEditor() {
       }
     }
 
+    // saved borders
     for(let border of editor.borders) {
       canvasCtx.strokeStyle = border.color;
       canvasCtx.beginPath();
@@ -296,23 +321,24 @@ function wordSnakeEditor() {
       canvasCtx.stroke();
     }
 
-    if(editor.activeMode == editorMode.wordEdit) {
-      for(let blockIndex in editor.wordBlocks) {
-        let block = editor.wordBlocks[blockIndex];
-        let isAbsent = editor.wordAbsentIndexes.includes(Number(blockIndex));
+    // current blocks
+    for(let blockIndex in editor.blocks) {
+      let block = editor.blocks[blockIndex];
+      let isAbsent = editor.wordAbsentIndexes.includes(Number(blockIndex));
 
-        canvasCtx.fillStyle = isAbsent ? 'gray' : editor.activeColor;
-        canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
-      }
+      canvasCtx.fillStyle = isAbsent ? 'gray' : editor.activeColor;
+      canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
     }
     
+    // current border points
     for(let point of editor.borderLine) {
       canvasCtx.beginPath();
       canvasCtx.arc(point.x * scale + scale/2, point.y * scale + scale/2, scale/4, 0, Math.PI * 2);
       canvasCtx.stroke();
     }
 
-    if(editor.activeMode == editorMode.borderEdit && editor.borderLine.length > 0) {
+    // current border line
+    if(editor.borderLine.length > 0) {
       canvasCtx.strokeStyle = editor.activeColor;
       canvasCtx.beginPath();
       canvasCtx.moveTo(editor.borderLine[0].x * scale + scale/2, editor.borderLine[0].y * scale + scale/2);
@@ -323,9 +349,34 @@ function wordSnakeEditor() {
 
       canvasCtx.stroke();
     }
+    
+    // pointer style
+    switch(editor.activeMode) {
+      case editorMode.wordEdit:
+        canvasCtx.strokeStyle = 'red';
+        break;
+      case editorMode.snakeEdit:
+        canvasCtx.strokeStyle = 'green';
+        break;
+      case editorMode.borderEdit:
+        canvasCtx.fillStyle = 'red';
+        break;
+      default:
+        canvasCtx.strokeStyle = 'gray';
+    }
+
+    // pointer
+    if(editor.activeMode != editorMode.borderEdit) {
+      canvasCtx.strokeRect(editor.activeCell.x * scale, editor.activeCell.y * scale, scale, scale);
+    } else {
+      canvasCtx.beginPath();
+      canvasCtx.arc(editor.activeCell.x * scale + scale/2, editor.activeCell.y * scale + scale/2, scale/4, 0, Math.PI * 2);
+      canvasCtx.closePath();
+      canvasCtx.fill();
+    }
 
     document.getElementById("levelData").innerText = editor.serializeLevel();
 
     needRedraw = false;
-  }, 100)
+  }, 100);
 }
