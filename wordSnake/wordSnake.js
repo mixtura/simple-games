@@ -357,7 +357,11 @@ function wordSnake() {
     actions.active = actions.active.filter(a => a != action);
   });
 
-  setInterval(() => {
+  window.addEventListener("resize", e => {
+    renderedLevelState = null;
+  })
+
+  window.setInterval(() => {
     let action = controller.next().value;
     
     if(action == actions.undo && history.length) {
@@ -374,7 +378,7 @@ function wordSnake() {
     }
   }, 10);
 
-  setInterval(function() {
+  window.setInterval(function() {
     if(levelState != renderedLevelState) {
       let size = Math.min(window.innerWidth, window.innerHeight);
       let scale = size / 25; 
