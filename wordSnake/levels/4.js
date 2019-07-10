@@ -1,0 +1,3 @@
+window.levels = window.levels || [];
+levels[3] = {"snake":null,"words":[{"blocks":[{"position":{"x":11,"y":7},"letter":"B"},{"position":{"x":11,"y":8},"letter":"L"},{"position":{"x":11,"y":9},"letter":"A"},{"position":{"x":11,"y":10},"letter":"C"},{"position":{"x":11,"y":11},"letter":"K"}],"absentBlockIndexes":[2],"color":"#000000"}],"borders":[{"color":"#000000","line":[{"x":0,"y":0},{"x":24,"y":0},{"x":24,"y":24},{"x":0,"y":24},{"x":0,"y":0}]}]}
+levels[3].winningColor = '';

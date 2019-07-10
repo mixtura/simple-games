@@ -179,88 +179,169 @@ function loadLevel(num, snake) {
 
 function wordSnake() {
   let currentLevelNum = 0;
-  let level = loadLevel(currentLevelNum);
-  let previousLevel = null;
+  let levelState = loadLevel(currentLevelNum);
+  let renderedLevelState = null;
   let scale = 20;
   let canvasCtx = document.getElementById("canvas").getContext('2d');
+  let actions = {};
+  let movement = movementGen(actions);
+
+  function* movementGen(actions) {
+    function getMoveVec() {
+      if(actions.left) {
+        return new Vector(-1, 0);
+      }
+
+      if(actions.up) {
+        return new Vector(0, -1);
+      }
+
+      if(actions.right) {
+        return new Vector(1, 0);
+      }
+
+      if(actions.down) {
+        return new Vector(0, 1);
+      }
+    }
+    
+    let idle = true;
+    let moveStartTime = null;
+    let lastMoveTime = null;
+    let moveStartDelay = 150;
+    let delayBetweenMoves = 50;
+
+    while(true) {
+      let currentTime = new Date().getTime();
+      let timeFromLastMove = currentTime - lastMoveTime; 
+      let timeFromMoveStart = currentTime - moveStartTime;
+      let moveVec = getMoveVec();
+
+      if(!moveVec) {
+        idle = true;
+        yield null;
+        continue;
+      }
+
+      if(idle) {
+        idle = false;
+        moveStartTime = currentTime;
+      } else {
+        if(timeFromMoveStart < moveStartDelay) {
+          yield null;
+          continue;
+        }
+    
+        if(timeFromLastMove < delayBetweenMoves) {
+          yield null;
+          continue;
+        }
+      }
+
+      lastMoveTime = currentTime;
+      
+      yield moveVec;
+    }
+  }
+
+  function updateLevel(level, moveVec) {
+    let backfallResult = level;
+  
+    if(!moveVec) {
+      return backfallResult;
+    }
+    
+    let movedSnake = level.snake.move(moveVec);
+    
+    if(movedSnake == level.snake) {
+      return backfallResult;
+    }
+
+    if(level.words.some(w => w.intersect(movedSnake.blocks[0]))) {
+      return backfallResult;
+    }
+
+    if(level.borders.some(b => b.cross(movedSnake.blocks[0].position) &&  b.color != movedSnake.color)) {
+      return backfallResult;
+    }
+
+    for(let word of level.words) {
+      if(word.complete(movedSnake.blocks)){
+        let newSnake = new Snake(word.blocks, word.color);
+        let newWords = level.words.map(w => 
+          w == word 
+          ? new Word(
+            movedSnake.blocks, 
+            movedSnake.getBlockIndexes(word.getAbsentBlocks()), 
+            movedSnake.color) 
+          : w.removeFromAbsent(movedSnake.blocks)
+             .addToAbsent(word.blocks)
+        );
+        
+        return { ...level, snake: newSnake, words: newWords };
+      }
+    }
+    
+    return { ...level, snake: movedSnake };
+  }
+
+  function loadNextLevelOnVictory(level) {
+    let winningBorder = level.borders.find(b => b.color == level.winningColor); 
+    let victory = level.snake.blocks.every(b => winningBorder.checkInsideSegment(b.position));
+
+    if(victory) {
+      return loadLevel(++currentLevelNum, level.snake);
+    } else {
+      return level;
+    }
+  }
 
   document.addEventListener("keydown", e => {
-    function getMoveVec(keyCode) {
-      switch(keyCode) {
-        case 37: // left
-          return new Vector(-1, 0);
-        case 38: // up
-          return new Vector(0, -1);
-        case 39: // right
-          return new Vector(1, 0);
-        case 40: // down
-          return  new Vector(0, 1);
-      }
+    switch(e.keyCode) {
+      case 37: // left
+        actions.left = true;
+        break;
+      case 38: // up
+        actions.up = true;
+        break;
+      case 39: // right      
+        actions.right = true;
+        break;
+      case 40: // down
+        actions.down = true;
+        break;
     }
-    
-    function updateLevel(level) {
-      let backfallResult = level;
-      let moveVec = getMoveVec(e.keyCode);
-    
-      if(!moveVec) {
-        return backfallResult;
-      }
-      
-      let movedSnake = level.snake.move(moveVec);
-      
-      if(movedSnake == level.snake) {
-        return backfallResult;
-      }
-
-      if(level.words.some(w => w.intersect(movedSnake.blocks[0]))) {
-        return backfallResult;
-      }
-
-      if(level.borders.some(b => b.cross(movedSnake.blocks[0].position) &&  b.color != movedSnake.color)) {
-        return backfallResult;
-      }
-
-      for(let word of level.words) {
-        if(word.complete(movedSnake.blocks)){
-          let newSnake = new Snake(word.blocks, word.color);
-          let newWords = level.words.map(w => 
-            w == word 
-            ? new Word(
-              movedSnake.blocks, 
-              movedSnake.getBlockIndexes(word.getAbsentBlocks()), 
-              movedSnake.color) 
-            : w.removeFromAbsent(movedSnake.blocks)
-               .addToAbsent(word.blocks)
-          );
-          
-          return { ...level, snake: newSnake, words: newWords };
-        } 
-      }
-      
-      return { ...level, snake: movedSnake };
-    }
-
-    function loadNextLevelOnVictory(level) {
-      let winningBorder = level.borders.find(b => b.color == level.winningColor); 
-      let victory = level.snake.blocks.every(b => winningBorder.checkInsideSegment(b.position));
-
-      if(victory) {
-        return loadLevel(++currentLevelNum, level.snake);
-      } else {
-        return level;
-      }
-    }
-    
-    level = updateLevel(level);
-    level = loadNextLevelOnVictory(level);
   });
 
+  document.addEventListener("keyup", e => {
+    switch(e.keyCode) {
+      case 37: // left
+        actions.left = false;
+        break;
+      case 38: // up
+        actions.up = false;
+        break;
+      case 39: // right      
+        actions.right = false;
+        break;
+      case 40: // down
+        actions.down = false;
+        break;
+    }
+  });
+
+  setInterval(() => {
+    let moveVec = movement.next().value;
+    levelState = updateLevel(levelState, moveVec);
+    levelState = loadNextLevelOnVictory(levelState);
+  }, 10);
+
   setInterval(function() {
-    if(level != previousLevel) {
+    if(levelState != renderedLevelState) {
       canvasCtx.clearRect(0, 0, 500, 500);
       canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
       
-      for(let word of level.words) {        
+      for(let word of levelState.words) {        
         for(let blockIndex in word.blocks) {
           let block = word.blocks[blockIndex];        
           canvasCtx.fillStyle = word.absentBlockIndexes.includes(Number(blockIndex)) ? '#F5F5F5' : word.color;
@@ -268,16 +349,16 @@ function wordSnake() {
         }
       }
 
-      canvasCtx.fillStyle = level.snake.color;
-      canvasCtx.strokeStyle = level.snake.color;
+      canvasCtx.fillStyle = levelState.snake.color;
+      canvasCtx.strokeStyle = levelState.snake.color;
       
-      for(let block of level.snake.blocks) {      
+      for(let block of levelState.snake.blocks) {      
         canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
         canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
         canvasCtx.fillRect(block.position.x * scale, block.position.y * scale + scale, scale, 2);
       }
       
-      for(let border of level.borders) {
+      for(let border of levelState.borders) {
         canvasCtx.strokeStyle = border.color;
         canvasCtx.beginPath();
         canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
@@ -289,7 +370,7 @@ function wordSnake() {
         canvasCtx.stroke();
       }
       
-      previousLevel = level;
+      renderedLevelState = levelState;
     }
   }, 10);
 }
