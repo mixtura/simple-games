@@ -133,8 +133,23 @@ class Border {
     return cells;
   }
 
-  cross(color, pos) {
-    return this.color != color && this.getOcuppiedCells().some(cell => cell.equals(pos));
+  cross(vec) {
+    return this.getOcuppiedCells().some(c => c.equals(vec));
+  }
+
+  checkInsideSegment(vec) {
+    for(let pointIndex = 1; pointIndex < this.line.length; pointIndex++) {
+      let point1 = this.line[pointIndex - 1];
+      let point2 = this.line[pointIndex];
+      
+      let d = (point2.x - point1.x) * (vec.y - point1.y) - (vec.x - point1.x) * (point2.y - point1.y);
+
+      if(d <= 0) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
 
@@ -221,7 +236,8 @@ function getDemoLevel() {
   }
 }
 
-function loadLevel(num) {
+function loadLevel(num, snake) {
+  let levelRawData = levels[num];
   let levelData = {};
 
   function mapVectors(vecs) {
@@ -236,15 +252,17 @@ function loadLevel(num) {
     return blocks.map(b => Object.assign(new Block(), b, {position: mapVector(b.position)}));
   }
 
-  levelData.snake = new Snake(mapBlocks(levels[num].snake.blocks), levels[num].snake.color);
-  levelData.words = levels[num].words.map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
-  levelData.borders = levels[num].borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
+  levelData.snake = snake || new Snake(mapBlocks(levelRawData.snake.blocks), levelRawData.snake.color);
+  levelData.words = levelRawData.words.map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
+  levelData.borders = levelRawData.borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
+  levelData.winningColor = levelRawData.winningColor;
 
   return levelData;
 }
 
 function wordSnake() {
-  let level = loadLevel(1);
+  let currentLevelNum = 0;
+  let level = loadLevel(currentLevelNum);
   let previousLevel = null;
   let scale = 20;
   let canvasCtx = document.getElementById("canvas").getContext('2d');
@@ -273,11 +291,15 @@ function wordSnake() {
       
       let movedSnake = level.snake.move(moveVec);
       
+      if(movedSnake == level.snake) {
+        return backfallResult;
+      }
+
       if(level.words.some(w => w.intersect(movedSnake.blocks[0]))) {
         return backfallResult;
       }
 
-      if(level.borders.some(b => b.cross(movedSnake.color, movedSnake.blocks[0].position))) {
+      if(level.borders.some(b => b.cross(movedSnake.blocks[0].position) &&  b.color != movedSnake.color)) {
         return backfallResult;
       }
 
@@ -295,21 +317,42 @@ function wordSnake() {
           );
           
           return { ...level, snake: newSnake, words: newWords };
-        }      
+        } 
       }
       
       return { ...level, snake: movedSnake };
     }
+
+    function loadNextLevelOnVictory(level) {
+      let winningBorder = level.borders.find(b => b.color == level.winningColor); 
+      let victory = level.snake.blocks.every(b => winningBorder.checkInsideSegment(b.position));
+
+      if(victory) {
+        return loadLevel(++currentLevelNum, level.snake);
+      } else {
+        return level;
+      }
+    }
     
     level = updateLevel(level);
+    level = loadNextLevelOnVictory(level);
   });
 
   setInterval(function() {
     if(level != previousLevel) {
       canvasCtx.clearRect(0, 0, 500, 500);
+      canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
+      
+      for(let word of level.words) {        
+        for(let blockIndex in word.blocks) {
+          let block = word.blocks[blockIndex];        
+          canvasCtx.fillStyle = word.absentBlockIndexes.includes(Number(blockIndex)) ? '#F5F5F5' : word.color;
+          canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
+        }
+      }
+
       canvasCtx.fillStyle = level.snake.color;
       canvasCtx.strokeStyle = level.snake.color;
-      canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
       
       for(let block of level.snake.blocks) {      
         canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
@@ -317,14 +360,6 @@ function wordSnake() {
         canvasCtx.fillRect(block.position.x * scale, block.position.y * scale + scale, scale, 2);
       }
       
-      for(let word of level.words) {        
-        for(let blockIndex in word.blocks) {
-          let block = word.blocks[blockIndex];        
-          canvasCtx.fillStyle = word.absentBlockIndexes.includes(Number(blockIndex)) ? '#DCDCDC' : word.color;
-          canvasCtx.fillText(block.letter, block.position.x * scale, block.position.y * scale + scale);
-        }
-      }
-
       for(let border of level.borders) {
         canvasCtx.strokeStyle = border.color;
         canvasCtx.beginPath();
