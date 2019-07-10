@@ -198,6 +198,7 @@ function loadLevel(num, snake) {
   levelData.words = levelRawData.words.map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
   levelData.borders = levelRawData.borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
   levelData.winningColor = levelRawData.winningColor;
+  levelData.num = num;
 
   if(num < 3) {
     levelData.borders.push(createWinningBorder(levelData));
@@ -207,46 +208,39 @@ function loadLevel(num, snake) {
 }
 
 function wordSnake() {
-  let currentLevelNum = 0;
-  let levelState = loadLevel(currentLevelNum);
+  let actions = {
+    left: "left",
+    right: "right",
+    up: "up",
+    down: "down",
+    undo: "undo",
+    active: []
+  };
+
+  let levelState = loadLevel(0);
   let renderedLevelState = null;
-  let scale = 20;
+  let history = [];
   let canvasCtx = document.getElementById("canvas").getContext('2d');
-  let actions = {};
-  let movement = movementGen(actions);
+  let controller = controllerGen(actions);
 
-  function* movementGen(actions) {
-    function getMoveVec() {
-      if(actions.left) {
-        return new Vector(-1, 0);
-      }
-
-      if(actions.up) {
-        return new Vector(0, -1);
-      }
-
-      if(actions.right) {
-        return new Vector(1, 0);
-      }
-
-      if(actions.down) {
-        return new Vector(0, 1);
-      }
+  function* controllerGen(actions) {
+    function getAction() {
+      return actions.active.length ? actions.active.reverse()[0] : null;
     }
     
     let idle = true;
-    let moveStartTime = null;
-    let lastMoveTime = null;
-    let moveStartDelay = 150;
-    let delayBetweenMoves = 50;
+    let actionStartTime = null;
+    let lastActionTime = null;
+    let actionStartDelay = 150;
+    let delayBetweenActions = 50;
 
     while(true) {
       let currentTime = new Date().getTime();
-      let timeFromLastMove = currentTime - lastMoveTime; 
-      let timeFromMoveStart = currentTime - moveStartTime;
-      let moveVec = getMoveVec();
+      let timeFromLastAction = currentTime - lastActionTime; 
+      let timeFromActionStart = currentTime - actionStartTime;
+      let action = getAction();
 
-      if(!moveVec) {
+      if(!action) {
         idle = true;
         yield null;
         continue;
@@ -254,27 +248,36 @@ function wordSnake() {
 
       if(idle) {
         idle = false;
-        moveStartTime = currentTime;
-      } else {
-        if(timeFromMoveStart < moveStartDelay) {
-          yield null;
-          continue;
-        }
-    
-        if(timeFromLastMove < delayBetweenMoves) {
-          yield null;
-          continue;
-        }
+        actionStartTime = currentTime;  
+      } else if(
+          timeFromActionStart < actionStartDelay || 
+          timeFromLastAction < delayBetweenActions) {
+        yield null;
+        continue;
       }
-
-      lastMoveTime = currentTime;
       
-      yield moveVec;
+      lastActionTime = currentTime;
+      
+      yield action;
     }
   }
 
-  function updateLevel(level, moveVec) {
+  function getMoveVec(action) {
+    switch(action) {
+      case actions.left:
+        return new Vector(-1, 0);
+      case actions.up:
+        return new Vector(0, -1);
+      case actions.right:
+        return new Vector(1, 0);
+      case actions.down:
+        return new Vector(0, 1);
+    }
+  }
+
+  function updateLevel(level, action) {
     let backfallResult = level;
+    let moveVec = getMoveVec(action);
   
     if(!moveVec) {
       return backfallResult;
@@ -319,55 +322,66 @@ function wordSnake() {
     let victory = level.snake.blocks.every(b => !winningBorder.checkInsideSegment(b.position));
 
     if(victory) {
-      return loadLevel(++currentLevelNum, level.snake);
+      return loadLevel(level.num + 1, level.snake);
     } else {
       return level;
     }
   }
 
-  document.addEventListener("keydown", e => {
-    switch(e.keyCode) {
+  function getActionByKeyCode(keyCode) {
+    switch(keyCode) {
       case 37: // left
-        actions.left = true;
-        break;
+        return actions.left;
       case 38: // up
-        actions.up = true;
-        break;
+        return actions.up;
       case 39: // right      
-        actions.right = true;
-        break;
+        return actions.right;
       case 40: // down
-        actions.down = true;
-        break;
+        return actions.down;
+      case 8: // backspace
+        return actions.undo;
+    }
+  }
+
+  document.addEventListener("keydown", e => {
+    let action = getActionByKeyCode(e.keyCode);
+    
+    if(action && !actions.active.includes(action)) {
+      actions.active.push(action);
     }
   });
 
-  document.addEventListener("keyup", e => {
-    switch(e.keyCode) {
-      case 37: // left
-        actions.left = false;
-        break;
-      case 38: // up
-        actions.up = false;
-        break;
-      case 39: // right      
-        actions.right = false;
-        break;
-      case 40: // down
-        actions.down = false;
-        break;
-    }
+  document.addEventListener("keyup", e => {    
+    let action = getActionByKeyCode(e.keyCode);
+    
+    actions.active = actions.active.filter(a => a != action);
   });
 
   setInterval(() => {
-    let moveVec = movement.next().value;
-    levelState = updateLevel(levelState, moveVec);
-    levelState = loadNextLevelOnVictory(levelState);
+    let action = controller.next().value;
+    
+    if(action == actions.undo && history.length) {
+      levelState = history.pop();
+    } else {
+      let newLevelState = updateLevel(levelState, action);
+
+      if(newLevelState != levelState) {
+        history.push(levelState);     
+
+        levelState = newLevelState;
+        levelState = loadNextLevelOnVictory(levelState);        
+      }
+    }
   }, 10);
 
   setInterval(function() {
     if(levelState != renderedLevelState) {
-      canvasCtx.clearRect(0, 0, 500, 500);
+      let size = Math.min(window.innerWidth, window.innerHeight);
+      let scale = size / 25; 
+
+      canvasCtx.canvas.width  = size;
+      canvasCtx.canvas.height = size;
+      canvasCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
       
       for(let word of levelState.words) {        
@@ -401,5 +415,5 @@ function wordSnake() {
       
       renderedLevelState = levelState;
     }
-  }, 10);
+  }, 1);
 }
