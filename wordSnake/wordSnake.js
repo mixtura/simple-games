@@ -154,6 +154,16 @@ class Border {
 }
 
 function createWinningBorder(level) {
+  function clamp(val, min, max) {
+    if(val > max) {
+      return max;
+    } else if (val < min) {
+      return min;
+    }
+
+    return val;
+  }
+
   let allVecs = [];
 
   for(let word of level.words) {
@@ -167,15 +177,17 @@ function createWinningBorder(level) {
   let mustTop = allVecs.sort((a, b) => a.y - b.y)[0];
   let mustBottom = allVecs.sort((a, b) => b.y - a.y)[0];
 
-  return new Border(
-    level.winningColor, 
-    [
-      new Vector(mustLeft.x - 2, mustTop.y - 2), 
-      new Vector(mustRight.x + 2, mustTop.y - 2), 
-      new Vector(mustRight.x + 2, mustBottom.y + 2), 
-      new Vector(mustLeft.x - 2, mustBottom.y + 2),      
-      new Vector(mustLeft.x - 2, mustTop.y - 2)  
-    ]);
+  let line = [
+    new Vector(mustLeft.x - 2, mustTop.y - 2), 
+    new Vector(mustRight.x + 2, mustTop.y - 2), 
+    new Vector(mustRight.x + 2, mustBottom.y + 2), 
+    new Vector(mustLeft.x - 2, mustBottom.y + 2),      
+    new Vector(mustLeft.x - 2, mustTop.y - 2)]
+  .map(v => new Vector(
+    clamp(v.x, 0, 24), 
+    clamp(v.y, 0, 24)));
+
+  return new Border(level.winningColor, line);
 }
 
 function loadLevel(num, snake) {
@@ -200,7 +212,7 @@ function loadLevel(num, snake) {
   levelData.winningColor = levelRawData.winningColor;
   levelData.num = num;
 
-  if(num < 3) {
+  if(!levelData.borders.find(b => b.color == levelData.winningColor)) {
     levelData.borders.push(createWinningBorder(levelData));
   }
   
@@ -407,6 +419,7 @@ function wordSnake() {
       
       for(let border of levelState.borders) {
         canvasCtx.strokeStyle = border.color;
+        canvasCtx.lineWidth = 1;
         canvasCtx.beginPath();
         canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
 
