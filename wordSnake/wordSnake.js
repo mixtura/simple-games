@@ -212,7 +212,7 @@ function loadLevel(num, snake) {
   levelData.winningColor = levelRawData.winningColor;
   levelData.num = num;
 
-  if(!levelData.borders.find(b => b.color == levelData.winningColor)) {
+  if(!levelData.borders.find(b => b.color == levelData.winningColor) && num < 4) {
     levelData.borders.push(createWinningBorder(levelData));
   }
   
