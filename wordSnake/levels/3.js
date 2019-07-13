@@ -1,3 +1,3 @@
 window.levels = window.levels || [];
-levels[3] = {"snake":null,"words":[{"blocks":[{"position":{"x":11,"y":7},"letter":"B"},{"position":{"x":11,"y":8},"letter":"L"},{"position":{"x":11,"y":9},"letter":"A"},{"position":{"x":11,"y":10},"letter":"C"},{"position":{"x":11,"y":11},"letter":"K"}],"absentBlockIndexes":[2],"color":"#000000"}],"borders":[{"color":"#000000","line":[{"x":0,"y":0},{"x":24,"y":0},{"x":24,"y":24},{"x":0,"y":24},{"x":0,"y":0}]}]}
-levels[3].winningColor = '#000000';
+levels[3] = {"snake":null,"words":[{"blocks":[{"position":{"x":7,"y":3},"letter":"Y"},{"position":{"x":8,"y":3},"letter":"E"},{"position":{"x":9,"y":3},"letter":"L"},{"position":{"x":10,"y":3},"letter":"L"},{"position":{"x":11,"y":3},"letter":"O"},{"position":{"x":12,"y":3},"letter":"W"}],"absentBlockIndexes":[1],"color":"#FFFF00"},{"blocks":[{"position":{"x":10,"y":4},"letter":"O"},{"position":{"x":9,"y":4},"letter":"R"},{"position":{"x":9,"y":5},"letter":"A"},{"position":{"x":9,"y":6},"letter":"N"},{"position":{"x":10,"y":6},"letter":"G"},{"position":{"x":10,"y":7},"letter":"E"}],"absentBlockIndexes":[4,0],"color":"#FF7F00"}],"borders":[]}
+levels[3].winningColor = '#FF7F00';

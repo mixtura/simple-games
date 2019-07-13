@@ -184,8 +184,8 @@ function createWinningBorder(level) {
     new Vector(mustLeft.x - 2, mustBottom.y + 2),      
     new Vector(mustLeft.x - 2, mustTop.y - 2)]
   .map(v => new Vector(
-    clamp(v.x, 0, 24), 
-    clamp(v.y, 0, 24)));
+    clamp(v.x, 0, 25), 
+    clamp(v.y, 0, 25)));
 
   return new Border(level.winningColor, line);
 }
@@ -331,7 +331,7 @@ function wordSnake() {
 
   function loadNextLevelOnVictory(level) {
     let winningBorder = level.borders.find(b => b.color == level.winningColor); 
-    let victory = level.snake.blocks.every(b => !winningBorder.checkInsideSegment(b.position));
+    let victory = level.snake.color == winningBorder.color && level.snake.blocks.every(b => !winningBorder.checkInsideSegment(b.position));
 
     if(victory) {
       return loadLevel(level.num + 1, level.snake);
@@ -419,7 +419,7 @@ function wordSnake() {
       
       for(let border of levelState.borders) {
         canvasCtx.strokeStyle = border.color;
-        canvasCtx.lineWidth = 1;
+        canvasCtx.lineWidth = 2;
         canvasCtx.beginPath();
         canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
 
