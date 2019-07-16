@@ -153,45 +153,7 @@ class Border {
   }
 }
 
-function createWinningBorder(level) {
-  function clamp(val, min, max) {
-    if(val > max) {
-      return max;
-    } else if (val < min) {
-      return min;
-    }
-
-    return val;
-  }
-
-  let allVecs = [];
-
-  for(let word of level.words) {
-    allVecs = allVecs.concat(word.blocks.map(b => b.position));
-  }
-
-  allVecs = allVecs.concat(level.snake.blocks.map(b => b.position));
-
-  let mustLeft = allVecs.sort((a, b) => a.x - b.x)[0];
-  let mustRight = allVecs.sort((a, b) => b.x - a.x)[0];
-  let mustTop = allVecs.sort((a, b) => a.y - b.y)[0];
-  let mustBottom = allVecs.sort((a, b) => b.y - a.y)[0];
-
-  let line = [
-    new Vector(mustLeft.x - 2, mustTop.y - 2), 
-    new Vector(mustRight.x + 2, mustTop.y - 2), 
-    new Vector(mustRight.x + 2, mustBottom.y + 2), 
-    new Vector(mustLeft.x - 2, mustBottom.y + 2),      
-    new Vector(mustLeft.x - 2, mustTop.y - 2)]
-  .map(v => new Vector(
-    clamp(v.x, 0, 25), 
-    clamp(v.y, 0, 25)));
-
-  return new Border(level.winningColor, line);
-}
-
-function loadLevel(num, snake) {
-  let levelRawData = levels[num];
+function mapLevelData(rawData, snake) {
   let levelData = {};
 
   function mapVectors(vecs) {
@@ -206,16 +168,19 @@ function loadLevel(num, snake) {
     return blocks.map(b => Object.assign(new Block(), b, {position: mapVector(b.position)}));
   }
 
-  levelData.snake = snake || new Snake(mapBlocks(levelRawData.snake.blocks), levelRawData.snake.color);
-  levelData.words = levelRawData.words.map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
-  levelData.borders = levelRawData.borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
-  levelData.winningColor = levelRawData.winningColor;
+  levelData.snake = snake || (rawData.snake && new Snake(mapBlocks(rawData.snake.blocks), rawData.snake.color));
+  levelData.words = rawData.words.map(w => Object.assign(new Word(), w, {blocks: mapBlocks(w.blocks)}));
+  levelData.borders = rawData.borders.map(b => Object.assign(new Border(), b, {line: mapVectors(b.line)}));
+  levelData.levelBorderLine = mapVectors(rawData.levelBorderLine);
+
+  return levelData;
+}
+
+function loadLevel(num, snake) {
+  let levelData = mapLevelData(levels[num], snake);
+
   levelData.num = num;
 
-  if(!levelData.borders.find(b => b.color == levelData.winningColor) && num < 4) {
-    levelData.borders.push(createWinningBorder(levelData));
-  }
-  
   return levelData;
 }
 
@@ -330,8 +295,7 @@ function wordSnake() {
   }
 
   function loadNextLevelOnVictory(level) {
-    let winningBorder = level.borders.find(b => b.color == level.winningColor); 
-    let victory = level.snake.color == winningBorder.color && level.snake.blocks.every(b => !winningBorder.checkInsideSegment(b.position));
+    let victory = level.snake.blocks.every(b => !isInside(level.levelBorderLine, b.position));
 
     if(victory) {
       return loadLevel(level.num + 1, level.snake);
@@ -419,7 +383,7 @@ function wordSnake() {
       
       for(let border of levelState.borders) {
         canvasCtx.strokeStyle = border.color;
-        canvasCtx.lineWidth = 2;
+        canvasCtx.lineWidth = 3;
         canvasCtx.beginPath();
         canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
 

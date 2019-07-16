@@ -2,7 +2,8 @@ let editorMode = {
   none: 'none',
   wordEdit: 'wordEdit',
   snakeEdit: 'snakeEdit',
-  borderEdit: 'borderEdit'
+  borderEdit: 'borderEdit',
+  levelBorderEdit: 'borderEdit.level' 
 };
 
 class Editor {
@@ -13,6 +14,7 @@ class Editor {
     this.blocks = [];
     this.wordAbsentIndexes = [];
     this.borders = [];
+    this.levelBorderLine = [];
     this.borderLine = [];
     this.activeColor = 'red';
     this.activeMode = editorMode.none;
@@ -26,6 +28,7 @@ class Editor {
         this.removeLastWordBlock();
         break;
       case editorMode.borderEdit: 
+      case editorMode.levelBorderEdit:
         this.removeLastBorderPoint();
         break;
     }
@@ -47,7 +50,7 @@ class Editor {
   }
 
   setBorderLinePoint() {
-    if(this.activeMode != editorMode.borderEdit){
+    if(!this.activeMode.startsWith("borderEdit")){
       return;
     }
 
@@ -117,6 +120,31 @@ class Editor {
     this.save();
 
     this.activeMode = editorMode.borderEdit;
+    
+    /*
+    let existingBorder = this.borders.find(b => b.getOcuppiedCells().some(v => v.equals(this.activeCell)));
+
+    if(existingBorder != null) {
+      this.borders = this.borders.filter(b => b != existingBorder);
+      this.line = existingBorder.line;
+      this.activeColor = existingBorder.color;
+    }
+    */
+  }
+ 
+  enableLevelBorderEdit() {
+    if(this.activeMode == editorMode.levelBorderEdit) {
+      return;
+    }
+
+    this.save();
+
+    this.activeMode = editorMode.levelBorderEdit;
+
+    if(this.levelBorderLine.length) {
+      this.activeCell = this.levelBorderLine[0];
+      this.borderLine = this.levelBorderLine;
+    }
   }
 
   enableWordEdit() {    
@@ -152,11 +180,19 @@ class Editor {
     }
   }
 
-  save() {    
+  save() {   
+    function addItem(parent, index, name) {
+      let node = document.createElement("li")
+
+      node.innerHTML = "<li index=" + index  + "><input type='checkbox' checked />" + name + "</li>";
+
+      parent.append(node);
+    }
+
     if(this.blocks.length) {
-      if(this.activeMode == editorMode.wordEdit) {
-        this.words.push(new Word(this.blocks, this.wordAbsentIndexes, this.activeColor));
-      } 
+      if(this.activeMode == editorMode.wordEdit) {        
+        this.words.push(new Word(this.blocks, this.wordAbsentIndexes, this.activeColor));        
+      }
       
       if(this.activeMode == editorMode.snakeEdit) {
         this.snake = new Snake(this.blocks, this.activeColor);
@@ -167,8 +203,29 @@ class Editor {
     }
 
     if(this.borderLine.length) {
-      this.borders.push(new Border(this.activeColor, this.borderLine));
+      if(this.activeMode == editorMode.borderEdit) {
+        this.borders.push(new Border(this.activeColor, this.borderLine));
+      }
+
+      if(this.activeMode == editorMode.levelBorderEdit) {
+        this.levelBorderLine = this.borderLine;
+      }
+
       this.borderLine = [];
+    }
+    
+    let wordsList = document.getElementById("words");    
+    let bordersList = document.getElementById("borders");
+      
+    bordersList.innerHTML = '';
+    wordsList.innerHTML = '';
+
+    for(let index in this.borders) {
+      addItem(bordersList, index, this.borders[index].color);
+    }
+
+    for(let index in this.words) {
+      addItem(wordsList, index, this.words[index].blocks.reduce((acc, b) => acc + b.letter, ""));
     }
   }
 
@@ -207,10 +264,21 @@ class Editor {
   }
 
   serializeLevel() {
+    function getActiveItemIndexes(itemName) {
+      return Array
+        .from(document.getElementById(itemName).querySelectorAll('li'))
+        .filter(e => e.getElementsByTagName("input")[0].checked)
+        .map(e => Number(e.getAttribute("index")));
+    }
+
+    let shownBorders = getActiveItemIndexes("borders");
+    let shownWords = getActiveItemIndexes("words");
+    
     let levelData = {
       snake: this.snake,
-      words: this.words,
-      borders: this.borders
+      words: this.words.filter((_, index) => shownWords.includes(index)),
+      borders: this.borders.filter((_, index) => shownBorders.includes(index)),
+      levelBorderLine: this.levelBorderLine
     };
 
     return JSON.stringify(levelData);
@@ -233,9 +301,7 @@ function wordSnakeEditor() {
     });
   });
 
-  document.addEventListener("keydown", e => {
-    needRedraw = true;
-    
+  document.addEventListener("keydown", e => {    
     switch(e.keyCode) {
       case 37: // left
         editor.movePointerLeft();
@@ -260,6 +326,9 @@ function wordSnakeEditor() {
         break;        
       case 52: // 4
         editor.enableBorderEdit();
+        break;        
+      case 53: // 5
+        editor.enableLevelBorderEdit();
         break;
       case 13: // enter
         editor.setBorderLinePoint();
@@ -273,8 +342,27 @@ function wordSnakeEditor() {
       default:
         if(e.keyCode >= 65 && e.keyCode <= 90) {
           editor.setBlock(e.key.toUpperCase(), false);
+        } else {
+          return;
         }
     }
+
+    needRedraw = true;
+  });
+
+  document.getElementById("levelData").addEventListener("change", function(el) {    
+    editor.enableDefaultMode();
+
+    let levelData = mapLevelData(JSON.parse(el.target.value));
+
+    editor.words = levelData.words;
+    editor.borders = levelData.borders;
+    editor.snake = levelData.snake;
+    editor.levelBorderLine = levelData.levelBorderLine;
+
+    editor.save();
+
+    needRedraw = true;
   });
 
   // Rendering shit
@@ -321,6 +409,21 @@ function wordSnakeEditor() {
       canvasCtx.stroke();
     }
 
+    // saved level border line
+    if(editor.levelBorderLine.length) {
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(editor.levelBorderLine[0].x * scale + scale/2, editor.levelBorderLine[0].y * scale + scale/2);
+      
+      for(let point of editor.levelBorderLine.slice(1, editor.levelBorderLine.length)) {
+        canvasCtx.lineTo(point.x * scale + scale/2, point.y * scale + scale/2);
+      }
+
+      canvasCtx.setLineDash([4, 2]);
+      canvasCtx.strokeStyle = "gold";      
+      canvasCtx.stroke();    
+      canvasCtx.setLineDash([]);
+    }
+
     // current blocks
     for(let blockIndex in editor.blocks) {
       let block = editor.blocks[blockIndex];
@@ -361,12 +464,16 @@ function wordSnakeEditor() {
       case editorMode.borderEdit:
         canvasCtx.fillStyle = 'red';
         break;
+    
+      case editorMode.levelBorderEdit:
+        canvasCtx.fillStyle = 'gold';
+        break;
       default:
         canvasCtx.strokeStyle = 'gray';
     }
 
     // pointer
-    if(editor.activeMode != editorMode.borderEdit) {
+    if(!editor.activeMode.startsWith("borderEdit")) {
       canvasCtx.strokeRect(editor.activeCell.x * scale, editor.activeCell.y * scale, scale, scale);
     } else {
       canvasCtx.beginPath();
@@ -375,7 +482,7 @@ function wordSnakeEditor() {
       canvasCtx.fill();
     }
 
-    document.getElementById("levelData").innerText = editor.serializeLevel();
+    document.getElementById("levelData").value = editor.serializeLevel();
 
     needRedraw = false;
   }, 100);
