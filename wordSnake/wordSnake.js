@@ -176,6 +176,19 @@ function mapLevelData(rawData, snake) {
   return levelData;
 }
 
+function shiftLevel(data, vec) {
+  let level = mapLevelData(data);
+
+  level.words = level.words.map(w => new Word(w.blocks.map(b => b.move(vec)), w.absentBlockIndexes, w.color));
+  level.borders = level.borders.map(b => new Border(b.color, b.line.map(v => v.add(vec))));
+  
+  if(level.snake) {
+    level.snake = new Snake(level.snake.blocks.map(b => b.move(vec)), level.snake.color);
+  }
+
+  return level;
+}
+
 function loadLevel(num, snake) {
   let levelData = mapLevelData(levels[num], snake);
 
@@ -295,7 +308,7 @@ function wordSnake() {
   }
 
   function loadNextLevelOnVictory(level) {
-    let victory = level.snake.blocks.every(b => !isInside(level.levelBorderLine, b.position));
+    let victory = level.snake.blocks.every(b => wn_PnPoly(b.position, level.levelBorderLine) == 0);
 
     if(victory) {
       return loadLevel(level.num + 1, level.snake);
