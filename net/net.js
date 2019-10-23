@@ -18,9 +18,7 @@ function Line(dot1, dot2, length) {
 	this.length = length;
 }
 
-function moveDot(dot, maxX, maxY, maxDistance) {
-	var speed = 0.5;
-	
+function moveDot(dot, maxX, maxY, maxDistance, speed) {
 	dot.x += Math.cos(dot.movementAngle) * speed;
 	dot.y += Math.sin(dot.movementAngle) * speed;	
 	
@@ -80,12 +78,16 @@ function drawLines(ctx, lines, maxLength) {
 	lines.sort((a, b) => b.length - a.length);
 	
 	for(var line of lines) {
-		var minWidth = Math.min(line.dot1.size, line.dot2.size);
-		var lineWidth = minWidth - (line.length / maxLength) * minWidth;
-		var color = mixColors(line.dot1.currentColor, line.dot2.currentColor, 0.5);
+		var maxWidth = Math.min(line.dot1.size, line.dot2.size);
+		var lineWidth = maxWidth - (line.length / maxLength) * maxWidth;
+
+		var gradient = ctx.createLinearGradient(line.dot1.x, line.dot1.y, line.dot2.x, line.dot2.y);
+
+		gradient.addColorStop("0", `rgb(${line.dot1.color[0]},${line.dot1.color[1]},${line.dot1.color[2]})`);
+		gradient.addColorStop("1.0", `rgb(${line.dot2.color[0]},${line.dot2.color[1]},${line.dot2.color[2]})`);
 		
 		ctx.lineWidth = lineWidth;
-		ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]})`;;
+		ctx.strokeStyle = gradient;
 		
 		ctx.beginPath();
 		ctx.moveTo(line.dot1.x, line.dot1.y);
@@ -94,18 +96,19 @@ function drawLines(ctx, lines, maxLength) {
 	}
 }
 
-var dotsCount = 150;
+var dotsCount = 300;
+var speed = 0.4;
 var dots = [];
 var width = window.innerWidth;
 var height = window.innerHeight;
-var maxDistance = 200; 
+var maxDistance = 130; 
 var minDotSize = 1.5;
-var maxDotSize = 2.5;
+var maxDotSize = 3;
 var backgroundColor = "black";
 var color = [
-	{min: 0, max: 255},
-	{min: 0, max: 255},
-	{min: 0, max: 255}
+	{min: 0, max: 0},
+	{min: 100, max: 255},
+	{min: 100, max: 255}
 ]
 
 while(--dotsCount != 0) {
@@ -140,6 +143,26 @@ function getRandColorChannel(min, max) {
 	return min + Math.floor(Math.random() * max);
 }
 
+setInterval(function() {	
+	ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, width, height);
+	
+	for(var dot of dots) {
+		moveDot(dot, width, height, maxDistance, speed);
+	}
+		
+	var lines = getLines(dots, maxDistance);
+	
+	drawLines(ctx, lines, maxDistance);	
+	drawDots(ctx, dots)	
+}, 10);
+
+window.addEventListener("resize", function() {
+	ctx.canvas.width = window.innerWidth;
+	ctx.canvas.height = window.innerHeight;
+});
+
+/*
 function mixColors(rgbA, rgbB, amountToMix){
 	var r = mixColorChannels(rgbA[0],rgbB[0],amountToMix);
 	var g = mixColorChannels(rgbA[1],rgbB[1],amountToMix);
@@ -154,7 +177,6 @@ function mixColors(rgbA, rgbB, amountToMix){
 	}
 }
 
-/*
 setInterval(function() {
 	for(var dot of dots) {
 		dot.movementAngle = Math.random() * Math.PI * 2;
@@ -173,17 +195,3 @@ document.getElementById("text").addEventListener("keypress", function(e) {
 	}
 });
 */
-
-setInterval(function() {	
-	ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, width, height);
-	
-	for(var dot of dots) {
-		moveDot(dot, width, height, maxDistance);
-	}
-		
-	var lines = getLines(dots, maxDistance);
-	
-	drawLines(ctx, lines, maxDistance);	
-	drawDots(ctx, dots)	
-}, 10);
