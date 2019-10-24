@@ -18,9 +18,9 @@ function Line(dot1, dot2, length) {
 	this.length = length;
 }
 
-function moveDot(dot, maxX, maxY, maxDistance, speed) {
-	dot.x += Math.cos(dot.movementAngle) * speed;
-	dot.y += Math.sin(dot.movementAngle) * speed;	
+function moveDot(dot, maxX, maxY, maxDistance, speedFactor) {
+	dot.x += Math.cos(dot.movementAngle) * speedFactor;
+	dot.y += Math.sin(dot.movementAngle) * speedFactor;	
 	
 	if(dot.x > maxX + maxDistance) {
 		dot.x = -maxDistance;
@@ -97,7 +97,7 @@ function drawLines(ctx, lines, maxLength) {
 }
 
 var dotsCount = 300;
-var speed = 0.4;
+var speedFactor = 0.8;
 var dots = [];
 var width = window.innerWidth;
 var height = window.innerHeight;
@@ -106,9 +106,9 @@ var minDotSize = 1.5;
 var maxDotSize = 3;
 var backgroundColor = "black";
 var color = [
-	{min: 0, max: 0},
-	{min: 100, max: 255},
-	{min: 100, max: 255}
+	{min: 0, max: 255},
+	{min: 0, max: 255},
+	{min: 0, max: 255}
 ]
 
 while(--dotsCount != 0) {
@@ -145,53 +145,19 @@ function getRandColorChannel(min, max) {
 
 setInterval(function() {	
 	ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 	
 	for(var dot of dots) {
-		moveDot(dot, width, height, maxDistance, speed);
+		moveDot(dot, width, height, maxDistance, speedFactor);
 	}
 		
 	var lines = getLines(dots, maxDistance);
 	
 	drawLines(ctx, lines, maxDistance);	
 	drawDots(ctx, dots)	
-}, 10);
+}, 15);
 
 window.addEventListener("resize", function() {
 	ctx.canvas.width = window.innerWidth;
 	ctx.canvas.height = window.innerHeight;
 });
-
-/*
-function mixColors(rgbA, rgbB, amountToMix){
-	var r = mixColorChannels(rgbA[0],rgbB[0],amountToMix);
-	var g = mixColorChannels(rgbA[1],rgbB[1],amountToMix);
-	var b = mixColorChannels(rgbA[2],rgbB[2],amountToMix);
-	
-	return [r,g,b];
-	
-	function mixColorChannels(colorChannelA, colorChannelB, amountToMix){
-		var channelA = colorChannelA*amountToMix;
-		var channelB = colorChannelB*(1-amountToMix);
-		return parseInt(channelA+channelB);
-	}
-}
-
-setInterval(function() {
-	for(var dot of dots) {
-		dot.movementAngle = Math.random() * Math.PI * 2;
-	}
-}, 100)
-
-setInterval(function() {
-	for(var dot of dots) {
-		dot.currentColor = mixColors(dot.currentColor, [255, 255, 255], 0.9);
-	}
-}, 50);
-
-document.getElementById("text").addEventListener("keypress", function(e) {	
-	for(var dot of dots) {
-		dot.currentColor = mixColors(dot.currentColor, dot.color, 0.7);
-	}
-});
-*/
