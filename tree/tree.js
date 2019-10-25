@@ -23,9 +23,9 @@ function LeafModel(branch) {
 
 function generateTreeModel(
     lengthParams,
-    weightBalanceParams,
     angleParams,
-    branchesMaxCount,
+    baseWeights,
+    weightVariant,
     levelsMaxCount,
     trunkWidth,
     trunkLength) {
@@ -78,8 +78,12 @@ function generateTreeModel(
         let weightLeft = 1;
         let branchWeights = [];
 
-        while(weightLeft > 0 && branchWeights.length < branchesMaxCount) {
-            let weight = getRandBetween(weightBalanceParams.min, weightBalanceParams.max); 
+        for(var baseWeight of baseWeights) {
+            if(weightLeft < 0) {
+                break;
+            }
+
+            let weight = getRandBetween(baseWeight - weightVariant, baseWeight + weightVariant);
 
             weightLeft -= weight;
 
@@ -105,33 +109,33 @@ function drawTree(ctx, tree) {
 
     drawBranch(tree.trunk, new Vector(ctx.canvas.width / 2, 0));
 
-    function drawBranch(branch, parentEndPos) {
-        let parentAngle = branch.parent ? (branch.parent.angle - Math.PI / 2) : 0;
-        
-        let startPosX = parentEndPos.x;
-        let startPosY = parentEndPos.y;
+    function drawBranch(branch, jointPos) {
+        let baseAngle = branch.parent ? (branch.parent.angle - Math.PI / 2) : 0;
+        let dir = new Vector(Math.cos(baseAngle + branch.angle), Math.sin(baseAngle + branch.angle));
 
-        let endPosX = startPosX + Math.cos(parentAngle + branch.angle) * branch.length;
-        let endPosY = startPosY + Math.sin(parentAngle + branch.angle) * branch.length; 
-
+        let endPosX = jointPos.x + dir.x * branch.length;
+        let endPosY = jointPos.y + dir.y * branch.length; 
         
+        let childrenJointPosX = jointPos.x + dir.x * (branch.length - branch.width / 2);
+        let childrenJointPosY = jointPos.y + dir.y * (branch.length - branch.width / 2);
+
         ctx.strokeStyle = "black";
         ctx.lineWidth = branch.width;
         ctx.beginPath();
-        ctx.moveTo(startPosX, startPosY);
+        ctx.moveTo(jointPos.x, jointPos.y);
         ctx.lineTo(endPosX, endPosY);
         ctx.stroke();
 
         if(branch.children) {        
             for(let childBranch of branch.children) {
-                drawBranch(childBranch, new Vector(endPosX, endPosY));
+                drawBranch(childBranch, new Vector(childrenJointPosX, childrenJointPosY));
             }
         } else {
-            ctx.strokeStyle = "green";
+            ctx.fillStyle = "green";
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(endPosX, endPosY, 8, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.fill();
         }
     }
 }
@@ -142,11 +146,11 @@ canvasContext.canvas.width = window.innerWidth;
 canvasContext.canvas.height = window.innerHeight;
 
 let treeModel = generateTreeModel(
-    {min: 80, max: 110},
-    {min: 0.4, max: 0.7},
-    {min: 0.2, max: 0.8},
-    3,
-    7,
+    {min: 120, max: 150},
+    {min: 0.2, max: 0.8},    
+    [0.6, 0.3, 0.6],
+    0.05,
+    6,
     50,
     180);
 
@@ -154,3 +158,23 @@ canvasContext.translate(0, canvasContext.canvas.height);
 canvasContext.scale(1, -1);
 
 drawTree(canvasContext, treeModel);
+
+let toolbox = createToolbox({
+    baseLength: {
+        type: inputType.value
+    },
+    lengthVariant: {
+        type: inputType.value
+    },
+    weights: {
+        type: inputType.array,
+        arrElement: {
+            type: inputType.value
+        }
+    },
+    weightVariant: {
+        type: inputType.value
+    }
+});
+
+document.getElementsByTagName("body")[0].prepend(toolbox);
