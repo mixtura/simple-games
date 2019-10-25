@@ -7,24 +7,24 @@ function TreeModel(trunk) {
     this.trunk = trunk;
 }
 
-function BranchModel(parent, length, startWidth, endWidth, direction, absoluteWeight) {
+function BranchModel(parent, length, width, angle, absoluteWeight) {
     this.parent = parent;
     this.length = length;
-    this.startWidth = startWidth;
-    this.endWidth = endWidth;
-    this.direction = direction;
+    this.width = width;
+    this.angle = angle;
     this.absoluteWeight = absoluteWeight;
 }
 
 function generateTreeModel(
-    childrenCountParams,
     lengthParams,
     weightBalanceParams,
+    angleParams,
+    branchesMaxCount,
     levelsMaxCount,
-    lengthReductionFactor,
-    widthReductionFactor) {
+    trunkWidth,
+    trunkLength) {
      
-    var trunk = new BranchModel(null, 100, 100, 80, 100);
+    let trunk = new BranchModel(null, trunkLength, trunkWidth, Math.PI / 2, 100);
 
     trunk.children = createChildBranches(trunk, 0);
 
@@ -35,83 +35,109 @@ function generateTreeModel(
             return;
         }
         
-        var count = getRandBetween(childrenCountParams.min, childrenCountParams.max);
-        var currentBranchNumber = 0;
-        var weightLeft = 1;
-        var children = [];
+        let weights = getWeights();
+        let childBranches = [];
+        let branchesCount = weights.length;
 
-        while(currentBranchNumber-- != count && weightLeft > 0) {
-            var weight = getRandWeight();
-            var absoluteWeight = parent.absoluteWeight * weight;
-            var startWidth = getStartBranchWidth(parent.endWidth, weight);
-            var endWidth = getEndBranchWidth(startWidth, widthReductionFactor);
-            var direction = getRandDirection(currentBranchNumber, count);
+        for(let currentBranchNumber = 0; currentBranchNumber < weights.length; currentBranchNumber++) {
+            let angle = getAngle(currentBranchNumber, branchesCount);
+            let branch = generateBranch(parent, weights[currentBranchNumber], angle);
+
+            branch.children = createChildBranches(branch, currentLevel + 1);
+
+            childBranches.push(branch);
+        }
+
+        return childBranches;
+    }
+
+    function generateBranch(parent, relativeWeight, angle) {
+        let absoluteWeight = parent.absoluteWeight * relativeWeight;
+        let width = getwidth(parent.width, relativeWeight);
+        let length = getRandBetween(lengthParams.min, lengthParams.max);
+        
+        return new BranchModel(parent, length, width, angle, absoluteWeight);
+    }
+
+    function getAngle(branchOrderNum, branchesCount) {
+        let range = (angleParams.max - angleParams.min) / branchesCount;
+
+        let minAngle = (angleParams.min + branchOrderNum * range) * Math.PI;
+        let maxAngle = (angleParams.min + (branchOrderNum + 1) * range) * Math.PI;
+
+        return getRandBetween(minAngle, maxAngle);
+    }
+    
+    function getWeights() {
+        let weightLeft = 1;
+        let branchWeights = [];
+
+        while(weightLeft > 0 && branchWeights.length < branchesMaxCount) {
+            let weight = getRandBetween(weightBalanceParams.min, weightBalanceParams.max); 
 
             weightLeft -= weight;
 
-            var branch = new BranchModel(parent, 50, startWidth, endWidth, direction, absoluteWeight);
-
-            branch.children = createChildBranches(branch, currentLevel + 1);
+            branchWeights.push(weight);
         }
 
-        return children;
+        branchWeights.sort(() => Math.random() - 0.5);
+
+        return branchWeights;
     }
 
-    function getRandDirection(branchNumber, neighboursCount) {
-        var angle = branchNumber / neighboursCount * Math.PI;
-        
-        return new Vector(Math.cos(angle), Math.sin(angle));
-    }
-    
-    function getRandWeight(weightLeft) {
-        var randWeight = getRandBetween(weightBalanceParams.min, weightBalanceParams.max);
-
-        if(randWeight <= 0) {
-            randWeight = weightLeft;
-        }
-
-        return randWeight;
-    }
-
-    function getStartBranchWidth(parentWidth, childRelativeWeight) {
+    function getwidth(parentWidth, childRelativeWeight) {
         return parentWidth * childRelativeWeight;
-    }
-
-    function getEndBranchWidth(startBranchWidth, reduceFactor) {
-        return startBranchWidth * reduceFactor;
-    }
-
-    function getBranchWidthAtThePoint(startBranchWidth, pointPosition, reduceFactor) {
-        return getEndBranchWidth(startBranchWidth, reduceFactor) * (1 - pointPosition);
     }
 }
 
 function getRandBetween(min, max) {
-    return Math.floor(Math.random() * (max - min)) + min;
+    return Math.random() * (max - min) + min;
 }
-
-var treeModel = generateTreeModel(
-    {min: 2, max: 5},
-    {min: 5, max: 7},
-    {min: 3, max: 4},
-    5,
-    0.7,
-    0.8);
 
 function drawTree(ctx, tree) {
     ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
 
-    drawBranch(tree.trunk);
+    drawBranch(tree.trunk, 0, new Vector(ctx.canvas.width / 2, 0));
 
-    function drawBranch(branch) {
-        ctx.lineWidth = branch.startWidth;
+    function drawBranch(branch, parentAngle, parentEndPos) {
+        let startPosX = parentEndPos.x;
+        let startPosY = parentEndPos.y;
+
+        let endPosX = startPosX + Math.cos(parentAngle + branch.angle) * branch.length;
+        let endPosY = startPosY + Math.sin(parentAngle + branch.angle) * branch.length; 
+
+        ctx.lineWidth = branch.width;
         ctx.beginPath();
-        ctx.moveTo();
-        ctx.lineTo();
+        ctx.moveTo(startPosX, startPosY);
+        ctx.lineTo(endPosX, endPosY);
         ctx.stroke();
 
-        for(var childBranch of branch.children) {
-            drawBranch(childBranch);
+        if(!branch.children) {
+            return;
+        }
+
+        for(let childBranch of branch.children) {
+            drawBranch(childBranch, branch.angle - Math.PI / 2, new Vector(endPosX, endPosY));
         }
     }
 }
+
+let canvasContext = document.getElementById("canvas").getContext('2d');
+
+canvasContext.canvas.width = window.innerWidth;
+canvasContext.canvas.height = window.innerHeight;
+
+let treeModel = generateTreeModel(
+    {min: 50, max: 110},
+    {min: 0.4, max: 0.7},
+    {min: 0.2, max: 0.8},
+    3,
+    7,
+    30,
+    180);
+
+canvasContext.translate(0, canvasContext.canvas.height);
+canvasContext.scale(1, -1);
+
+drawTree(canvasContext, treeModel);
