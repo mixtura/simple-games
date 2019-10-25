@@ -15,6 +15,12 @@ function BranchModel(parent, length, width, angle, absoluteWeight) {
     this.absoluteWeight = absoluteWeight;
 }
 
+
+function LeafModel(branch) {
+    
+}
+
+
 function generateTreeModel(
     lengthParams,
     weightBalanceParams,
@@ -95,30 +101,37 @@ function getRandBetween(min, max) {
 }
 
 function drawTree(ctx, tree) {
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1;    
 
-    drawBranch(tree.trunk, 0, new Vector(ctx.canvas.width / 2, 0));
+    drawBranch(tree.trunk, new Vector(ctx.canvas.width / 2, 0));
 
-    function drawBranch(branch, parentAngle, parentEndPos) {
+    function drawBranch(branch, parentEndPos) {
+        let parentAngle = branch.parent ? (branch.parent.angle - Math.PI / 2) : 0;
+        
         let startPosX = parentEndPos.x;
         let startPosY = parentEndPos.y;
 
         let endPosX = startPosX + Math.cos(parentAngle + branch.angle) * branch.length;
         let endPosY = startPosY + Math.sin(parentAngle + branch.angle) * branch.length; 
 
+        
+        ctx.strokeStyle = "black";
         ctx.lineWidth = branch.width;
         ctx.beginPath();
         ctx.moveTo(startPosX, startPosY);
         ctx.lineTo(endPosX, endPosY);
         ctx.stroke();
 
-        if(!branch.children) {
-            return;
-        }
-
-        for(let childBranch of branch.children) {
-            drawBranch(childBranch, branch.angle - Math.PI / 2, new Vector(endPosX, endPosY));
+        if(branch.children) {        
+            for(let childBranch of branch.children) {
+                drawBranch(childBranch, new Vector(endPosX, endPosY));
+            }
+        } else {
+            ctx.strokeStyle = "green";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(endPosX, endPosY, 8, 0, Math.PI * 2);
+            ctx.stroke();
         }
     }
 }
@@ -129,12 +142,12 @@ canvasContext.canvas.width = window.innerWidth;
 canvasContext.canvas.height = window.innerHeight;
 
 let treeModel = generateTreeModel(
-    {min: 50, max: 110},
+    {min: 80, max: 110},
     {min: 0.4, max: 0.7},
     {min: 0.2, max: 0.8},
     3,
     7,
-    30,
+    50,
     180);
 
 canvasContext.translate(0, canvasContext.canvas.height);
