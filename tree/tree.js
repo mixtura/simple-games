@@ -27,6 +27,7 @@ function generateTreeModel(
     baseWeights,
     weightVariant,
     levelsMaxCount,
+    minWidth,
     trunkWidth,
     trunkLength) {
      
@@ -41,6 +42,10 @@ function generateTreeModel(
             return;
         }
         
+        if(parent.width < minWidth) {
+            return;
+        }
+
         let weights = getWeights();
         let childBranches = [];
         let branchesCount = weights.length;
@@ -146,11 +151,12 @@ canvasContext.canvas.width = window.innerWidth;
 canvasContext.canvas.height = window.innerHeight;
 
 let treeModel = generateTreeModel(
-    {min: 120, max: 150},
+    {min: 80, max: 100},
     {min: 0.2, max: 0.8},    
-    [0.6, 0.3, 0.6],
+    [0.6, 0.4, 0.3],
     0.05,
-    6,
+    8,
+    0.8,
     50,
     180);
 
@@ -159,22 +165,36 @@ canvasContext.scale(1, -1);
 
 drawTree(canvasContext, treeModel);
 
-let toolbox = createToolbox({
-    baseLength: {
-        type: inputType.value
-    },
-    lengthVariant: {
-        type: inputType.value
-    },
+let initialValues = {
+    baseLength: 90,
+    lengthVariant: 20,
+    weights: [0.6, 0.4, 0.3],
+    weightVariant: 0.05,
+    levelsMaxCount: 8,
+    minWidth: 0.8,
+    trunkWidth: 50,
+    trunkLength: 180 
+};
+
+let schema = {
+    baseLength: { type: inputType.value },
+    lengthVariant: { type: inputType.value },
     weights: {
         type: inputType.array,
-        arrElement: {
+        elementSchema: {
             type: inputType.value
         }
     },
-    weightVariant: {
-        type: inputType.value
-    }
-});
+    weightVariant: { type: inputType.value },
+    levelsMaxCount: { type: inputType.value },
+    minWidth: { type: inputType.value },
+    trunkWidth: { type: inputType.value },
+    trunkLength: { type: inputType.value }
+};
+
+let toolbox = createToolbox(
+    schema,
+    initialValues,
+    values => {});
 
 document.getElementsByTagName("body")[0].prepend(toolbox);
