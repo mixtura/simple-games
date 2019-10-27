@@ -6,8 +6,9 @@ canvasContext.translate(0, canvasContext.canvas.height);
 canvasContext.scale(1, -1);
 
 let initialValues = {
-  baseMinAngle: 0.2,
-  baseMaxAngle: 0.8,
+  minAngle: 0.2,
+  maxAngle: 0.8,
+  angleVariant: 0.2,
   baseLengthes: [130, 100, 40, 40, 40, 30, 30, 20, 20],
   lengthVariant: 5,
   baseWeights: [0.6, 0.4, 0.3],
@@ -19,8 +20,9 @@ let initialValues = {
 };
 
 let schema = {
-  baseMinAngle: inputType.value,
-  baseMaxAngle: inputType.value,
+  minAngle: inputType.value,
+  maxAngle: inputType.value,
+  angleVariant: inputType.value,
   baseLengthes: inputType.array,
   lengthVariant: inputType.value,
   baseWeights: inputType.array,
