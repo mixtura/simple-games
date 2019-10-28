@@ -46,7 +46,7 @@ let toolbox = createToolbox(
     
     let treeModel = generateTreeModel(params);
   
-    drawTree(canvasContext, treeModel, params.showLeaves, params.elasticityRatio, params.sun);
+    drawTree(canvasContext, treeModel, params.showLeaves);
   });
 
 document.getElementsByTagName("body")[0].prepend(toolbox);

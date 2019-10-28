@@ -3,6 +3,27 @@ function Vector(x, y) {
   this.y = y;
 }
 
+Vector.prototype.add = function(vec2) {
+  return new Vector(this.x + vec2.x, this.y + vec2.y);  
+}
+
+Vector.prototype.subtract = function(vec2) {
+  return new Vector(this.x - vec2.x, this.y - vec2.y);
+}
+
+Vector.prototype.multiply = function(value) {
+  return new Vector(this.x * value, this.y * value);
+}
+
+Vector.up = new Vector(0, 1);
+Vector.left = new Vector(-1, 0);
+Vector.right = new Vector(1, 0);
+Vector.down = new Vector(0, -1);
+
+Vector.fromAngle = function(angle) {
+  return new Vector(Math.cos(angle), Math.sin(angle));
+}
+
 function getRandWithVariantRatio(base, variantRatio) {
   return getRandWithVariant(base, base * variantRatio);
 }
