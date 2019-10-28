@@ -2,28 +2,28 @@ function TreeModel(trunk) {
   this.trunk = trunk;
 }
 
-function BranchModel(parent, length, width, angle, absoluteWeight) {
+function BranchModel(parent, relativeWeight, length, width, angle, absoluteWeight) {
   this.parent = parent;
   this.length = length;
   this.width = width;
   this.angle = angle;
   this.absoluteWeight = absoluteWeight;
+  this.relativeWeight = relativeWeight;
 }
 
 function generateTreeModel({
-  gravity,
   minAngle,
   maxAngle,
   angleVariant,
   baseLengthes,
-  lengthVariant,
+  lengthVariantRatio,
   baseWeights,
   weightVariant,
   minWidth,
   trunkWidth,
   trunkLength}) {
        
-  let trunk = new BranchModel(null, trunkLength, trunkWidth, Math.PI / 2, 100);
+  let trunk = new BranchModel(null, 1, trunkLength, trunkWidth, Math.PI / 2, 1);
 
   trunk.children = createChildBranches(trunk, 0);
 
@@ -51,11 +51,11 @@ function generateTreeModel({
     });
 
     let childBranches = weights.map((weight, index) => {
-      let length = getRandWithVariant(baseLengthes[currentLevel], lengthVariant);
+      let length = getRandWithVariantRatio(baseLengthes[currentLevel], lengthVariantRatio);
       let absoluteWeight = parent.absoluteWeight * weight;
       let width = getWidth(parent.width, weight);
       let angle = angles[index];
-      let branch = new BranchModel(parent, length, width, angle, absoluteWeight);
+      let branch = new BranchModel(parent, weight, length, width, angle, absoluteWeight);
 
       branch.children = createChildBranches(branch, currentLevel + 1);
       
@@ -63,10 +63,6 @@ function generateTreeModel({
     });
 
     return childBranches;
-  }
-
-  function applyGravity() {
-    
   }
 
   function getAngles(count) {
@@ -80,7 +76,7 @@ function generateTreeModel({
     let baseMaxAngle = (minAngle + (branchOrderNum + 1) * range) * Math.PI;
     let baseAngle = baseMinAngle + (baseMaxAngle - baseMinAngle) / 2;
 
-    return getRandWithVariant(baseAngle, angleVariant);
+    return getRandBetween(baseAngle - angleVariant, baseAngle + angleVariant);
   }
   
   function getWeights() {
@@ -107,7 +103,7 @@ function generateTreeModel({
   }
 }
 
-function drawTree(ctx, treeModel, showLeaves) {
+function drawTree(ctx, treeModel, showLeaves, elasticityRatio, sun) {
   ctx.lineWidth = 1;
   ctx.strokeStyle = 'black';  
 
@@ -116,7 +112,8 @@ function drawTree(ctx, treeModel, showLeaves) {
   function drawBranch(branch, baseAngle, jointPos) {
     let dir = new Vector(Math.cos(baseAngle + branch.angle), Math.sin(baseAngle + branch.angle));
 
-    dir = new Vector(dir.x, (dir.y + 1));
+    dir = new Vector(dir.x, dir.y - Math.pow(1 / (elasticityRatio + 1), branch.absoluteWeight * 10));
+    dir = new Vector(dir.x, dir.y + sun);
 
     let endPosX = jointPos.x + dir.x * branch.length;
     let endPosY = jointPos.y + dir.y * branch.length; 
@@ -143,16 +140,5 @@ function drawTree(ctx, treeModel, showLeaves) {
       ctx.arc(endPosX, endPosY, 8, 0, Math.PI * 2);
       ctx.fill();
     }
-  }
-
-  function debugRay(startPos, angle, color) {
-    let endPosX = startPos.x + Math.cos(angle) * 20;
-    let endPosY = startPos.y + Math.sin(angle) * 20;
-
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(startPos.x, startPos.y);
-    ctx.lineTo(endPosX, endPosY);
-    ctx.stroke();
   }
 }
