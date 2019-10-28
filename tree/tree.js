@@ -2,26 +2,38 @@ function TreeModel(trunk) {
   this.trunk = trunk;
 }
 
-function BranchModel(parent, length, width, angle, absoluteWeight) {
+function BranchModel(
+  parent, 
+  weight, 
+  length, width, 
+  absoluteAngle, 
+  absoluteWeight, 
+  direction) {
+  
   this.parent = parent;
+  this.weight = weight;
   this.length = length;
   this.width = width;
-  this.angle = angle;
-  this.absoluteWeight = absoluteWeight;
+  this.absoluteAngle = absoluteAngle;
+  this.absoluteWeight = absoluteWeight;  
+  this.direction = direction;
 }
 
 function generateTreeModel({
-  baseMinAngle,
-  baseMaxAngle,
+  sun,
+  elasticityRatio,
+  minAngle,
+  maxAngle,
+  angleVariant,
   baseLengthes,
-  lengthVariant,
+  lengthVariantRatio,
   baseWeights,
   weightVariant,
   minWidth,
   trunkWidth,
   trunkLength}) {
-       
-  let trunk = new BranchModel(null, trunkLength, trunkWidth, Math.PI / 2, 100);
+
+  let trunk = new BranchModel(null, 1, trunkLength, trunkWidth, Math.PI / 2, 1, Vector.up);
 
   trunk.children = createChildBranches(trunk, 0);
 
@@ -37,38 +49,56 @@ function generateTreeModel({
     }
 
     let weights = getWeights();
-    let childBranches = [];
-    let branchesCount = weights.length;
+    let angles = getAngles(weights.length);
 
-    for(let currentBranchNumber in weights) {
-      currentBranchNumber = Number.parseInt(currentBranchNumber);
+    weights.sort();
+    angles.sort(getClosestToPerpendicularAngle);
 
-      let angle = getAngle(currentBranchNumber, branchesCount);
-      let length = getRandWithVariant(baseLengthes[currentLevel], lengthVariant);
-      let branch = generateBranch(parent, weights[currentBranchNumber], length, angle);
+    return weights.map((weight, index) => {
+      let absoluteWeight = getAbsoluteWeight(parent, weight);
+      let absoluteAngle = getAbsoluteAngle(parent, angles[index]); 
+      let baseLength = baseLengthes[currentLevel];
+      let angle = angles[index];
+
+      let branch = new BranchModel(
+        parent,
+        weight,
+        getRandWithVariantRatio(baseLength, lengthVariantRatio),
+        getWidth(parent, weight),
+        getAbsoluteAngle(parent, angle),
+        absoluteWeight,
+        getDirection(absoluteAngle, absoluteWeight)
+      );
 
       branch.children = createChildBranches(branch, currentLevel + 1);
-
-      childBranches.push(branch);
-    }
-
-    return childBranches;
+      
+      return branch;
+    });
   }
 
-  function generateBranch(parent, relativeWeight, length, angle) {
-    let absoluteWeight = parent.absoluteWeight * relativeWeight;
-    let width = getwidth(parent.width, relativeWeight);
-    
-    return new BranchModel(parent, length, width, angle, absoluteWeight);
+  function getClosestToPerpendicularAngle(a, b) {
+    a = a < Math.PI / 2 ? a : Math.PI - a;
+    b = b < Math.PI / 2 ? b : Math.PI - b;
+
+    return a - b;
+  }
+
+  function getAngles(count) {
+    return [...Array(count).keys()].map(index => getAngle(index, count));
   }
 
   function getAngle(branchOrderNum, branchesCount) {
-    let range = (baseMaxAngle - baseMinAngle) / branchesCount;
+    let range = (maxAngle - minAngle) / branchesCount;
 
-    let minAngle = (baseMinAngle + branchOrderNum * range) * Math.PI;
-    let maxAngle = (baseMinAngle + (branchOrderNum + 1) * range) * Math.PI;
+    let baseMinAngle = (minAngle + branchOrderNum * range) * Math.PI;
+    let baseMaxAngle = (minAngle + (branchOrderNum + 1) * range) * Math.PI;
+    let baseAngle = baseMinAngle + (baseMaxAngle - baseMinAngle) / 2;
 
-    return getRandBetween(minAngle, maxAngle);
+    return getRandBetween(baseAngle - angleVariant, baseAngle + angleVariant);
+  }
+
+  function getAbsoluteAngle(parent, angle) {
+    return parent.absoluteAngle + angle - Math.PI / 2;
   }
   
   function getWeights() {
@@ -87,13 +117,25 @@ function generateTreeModel({
       branchWeights.push(weight);
     }
 
-    branchWeights.sort(() => Math.random() - 0.5);
-
     return branchWeights;
   }
 
-  function getwidth(parentWidth, childRelativeWeight) {
-    return parentWidth * childRelativeWeight;
+  function getAbsoluteWeight(parent, weight) {
+    return parent.absoluteWeight * weight;
+  }
+
+  function getWidth(parent, childRelativeWeight) {
+    return parent.width * childRelativeWeight;
+  }
+
+  function getDirection(absoluteAngle, absoluteWeight) {
+    let dir = Vector.fromAngle(absoluteAngle);
+    let gravityImpact = Math.pow(1 / (elasticityRatio + 1), absoluteWeight * 10);
+
+    dir = Vector.down.multiply(gravityImpact).add(dir);
+    dir = Vector.up.multiply(sun).add(dir)
+
+    return dir;
   }
 }
 
@@ -104,31 +146,26 @@ function drawTree(ctx, treeModel, showLeaves) {
   drawBranch(treeModel.trunk, new Vector(ctx.canvas.width / 2, 0));
 
   function drawBranch(branch, jointPos) {
-    let baseAngle = branch.parent ? (branch.parent.angle - Math.PI / 2) : 0;
-    let dir = new Vector(Math.cos(baseAngle + branch.angle), Math.sin(baseAngle + branch.angle));
-
-    let endPosX = jointPos.x + dir.x * branch.length;
-    let endPosY = jointPos.y + dir.y * branch.length; 
-    
-    let childrenJointPosX = jointPos.x + dir.x * (branch.length - branch.width / 2);
-    let childrenJointPosY = jointPos.y + dir.y * (branch.length - branch.width / 2);
+    let endPos = branch.direction.multiply(branch.length).add(jointPos);
+    let childrenJointPos = branch.direction.multiply(-branch.width / 2).add(endPos);
 
     ctx.strokeStyle = "black";
     ctx.lineWidth = branch.width;
+
     ctx.beginPath();
     ctx.moveTo(jointPos.x, jointPos.y);
-    ctx.lineTo(endPosX, endPosY);
+    ctx.lineTo(endPos.x, endPos.y);
     ctx.stroke();
 
     if(branch.children) {    
       for(let childBranch of branch.children) {
-        drawBranch(childBranch, new Vector(childrenJointPosX, childrenJointPosY));
+        drawBranch(childBranch, childrenJointPos);
       }
     } else if(showLeaves) {
       ctx.fillStyle = "green";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(endPosX, endPosY, 8, 0, Math.PI * 2);
+      ctx.arc(endPos.x, endPos.y, 8, 0, Math.PI * 2);
       ctx.fill();
     }
   }
