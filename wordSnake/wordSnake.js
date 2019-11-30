@@ -8,6 +8,19 @@ class Vector {
     return new Vector(this.x + vec.x, this.y + vec.y);
   }
 
+  substract(vec) {
+    return new Vector(this.x - vec.x, this.y - vec.y);
+  }
+
+  multiply(val) {
+    return new Vector(this.x * val, this.y * val);
+  }
+
+  normalize() {
+    var magnitude = Math.sqrt(this.x * this.x + this.y * this.y);    
+    return new Vector(this.x / magnitude, this.y / magnitude);
+  }
+
   equals(vec) {
     return this.x === vec.x && this.y === vec.y;
   }
@@ -16,7 +29,13 @@ class Vector {
 class Block {
   constructor(position, letter) {
     this.position = position;
-    this.letter = letter;
+    this.letter = letter;    
+    this.anim = new AnimationChain(      
+      new Simultaneously(
+        new FixedState(1, new ExpandAnimation(5)),
+        SqueesAnimation(5)),
+      new ExpandAnimation(5)
+    );
   }
 
   move(vec) {
@@ -36,6 +55,9 @@ class Snake {
   constructor(blocks, color) {
     this.blocks = blocks;
     this.color = color;
+    this.blockAnimations = blocks.map((b, index) =>
+      new AnimationThreshold(b.anim, index / blocks.length, (index + 1) / blocks.length)
+    );
   }
 
   move(vec) {
@@ -176,19 +198,6 @@ function mapLevelData(rawData, snake) {
   return levelData;
 }
 
-function shiftLevel(data, vec) {
-  let level = mapLevelData(data);
-
-  level.words = level.words.map(w => new Word(w.blocks.map(b => b.move(vec)), w.absentBlockIndexes, w.color));
-  level.borders = level.borders.map(b => new Border(b.color, b.line.map(v => v.add(vec))));
-  
-  if(level.snake) {
-    level.snake = new Snake(level.snake.blocks.map(b => b.move(vec)), level.snake.color);
-  }
-
-  return level;
-}
-
 function loadLevel(num, snake) {
   let levelData = mapLevelData(levels[num], snake);
 
@@ -208,7 +217,7 @@ function wordSnake() {
   };
 
   let levelState = loadLevel(0);
-  let renderedLevelState = null;
+  let animState = 0;
   let history = [];
   let canvasCtx = document.getElementById("canvas").getContext('2d');
   let controller = controllerGen(actions);
@@ -285,6 +294,10 @@ function wordSnake() {
 
     if(level.borders.some(b => b.cross(movedSnake.blocks[0].position) &&  b.color != movedSnake.color)) {
       return backfallResult;
+    }
+
+    if(animState >= 1) {      
+      animState = 0;
     }
 
     for(let word of level.words) {
@@ -368,46 +381,57 @@ function wordSnake() {
   }, 10);
 
   window.setInterval(function() {
-    if(levelState != renderedLevelState) {
-      let size = Math.min(window.innerWidth, window.innerHeight);
-      let scale = size / 25; 
-
-      canvasCtx.canvas.width  = size;
-      canvasCtx.canvas.height = size;
-      canvasCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
-      
-      for(let word of levelState.words) {        
-        for(let blockIndex in word.blocks) {
-          let block = word.blocks[blockIndex];        
-          canvasCtx.fillStyle = word.absentBlockIndexes.includes(Number(blockIndex)) ? '#F5F5F5' : word.color;
-          canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
-        }
-      }
-
-      canvasCtx.fillStyle = levelState.snake.color;
-      canvasCtx.strokeStyle = levelState.snake.color;
-      
-      for(let block of levelState.snake.blocks) {      
-        canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
-        canvasCtx.strokeRect(block.position.x * scale, block.position.y * scale, scale, scale);
-        canvasCtx.fillRect(block.position.x * scale, block.position.y * scale + scale, scale, 2);
-      }
-      
-      for(let border of levelState.borders) {
-        canvasCtx.strokeStyle = border.color;
-        canvasCtx.lineWidth = 3;
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
-
-        for(let point of border.line.slice(1, border.line.length)) {
-          canvasCtx.lineTo(point.x * scale + scale/2, point.y * scale + scale/2);
-        }
-
-        canvasCtx.stroke();
-      }
-      
-      renderedLevelState = levelState;
+    if(animState < 1) {
+      animState += (1 / levelState.snake.blocks.length) / 2.5;
     }
-  }, 1);
+
+    let size = Math.min(window.innerWidth, window.innerHeight);
+    let scale = size / 25; 
+
+    canvasCtx.canvas.width  = size;
+    canvasCtx.canvas.height = size;
+    canvasCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    canvasCtx.font = scale + 'px "Fira Sans", sans-serif';
+    
+    for(let word of levelState.words) {        
+      for(let blockIndex in word.blocks) {
+        let block = word.blocks[blockIndex];        
+        canvasCtx.fillStyle = word.absentBlockIndexes.includes(Number(blockIndex)) ? '#F5F5F5' : word.color;
+        canvasCtx.fillText(block.letter, block.position.x * scale + scale / 6, block.position.y * scale + scale / 1.2);
+      }
+    }
+
+    let snake = levelState.snake;
+
+    canvasCtx.fillStyle = snake.color;
+    canvasCtx.strokeStyle = snake.color;
+    
+    for(let blockIndex in snake.blocks) {
+      let block = snake.blocks[blockIndex];
+      let blockAnim = snake.blockAnimations[blockIndex];
+      var pivot = block.position.multiply(scale).add(new Vector(scale / 2, scale / 2));
+      var animatedPos = blockAnim(animState, block.position.multiply(scale), pivot);
+      var animatedScale = blockAnim(animState, new Vector(scale, 0), new Vector(scale / 2, 0)).x;
+
+      var x = animatedPos.x;
+      var y = animatedPos.y;
+
+      canvasCtx.fillText(block.letter, x + animatedScale / 6, y + animatedScale / 1.2);
+      canvasCtx.strokeRect(x, y, animatedScale, animatedScale);
+      canvasCtx.fillRect(x, y + animatedScale, animatedScale, 2);
+    }
+    
+    for(let border of levelState.borders) {
+      canvasCtx.strokeStyle = border.color;
+      canvasCtx.lineWidth = 3;
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(border.line[0].x * scale + scale/2, border.line[0].y * scale + scale/2);
+
+      for(let point of border.line.slice(1, border.line.length)) {
+        canvasCtx.lineTo(point.x * scale + scale/2, point.y * scale + scale/2);
+      }
+
+      canvasCtx.stroke();
+    }    
+  }, 40);
 }
