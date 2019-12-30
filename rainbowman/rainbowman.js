@@ -95,37 +95,31 @@ class Camera {
   }
 }
 
-function attach(id, parentId, points, connections) {
-  connections[id] = parentId;
-
-  let point = points[id];
-  let parentPoint = points[parentId];
+function attach(point, parentPoint, connections) {
+  connections[point.id] = parentPoint.id;
   
   point.pos = point.pos.subtract(parentPoint.pos);  
 }
 
-function detach(id, points, connections) {
-  let point = points[id];
-  let parentPoint = points[connections[id]];
-
+function detach(point, parentPoint, connections) {
   point.pos = point.pos.add(parentPoint.pos);
   
-  connections[id] = null;
+  connections[point.id] = null;
 }
 
 function simulate(points, bodies, colliders, platforms, tickDuration) {
-  for(let body of Object.values(bodies)) {    
+  for(let id of Object.keys(bodies).filter(k => !!bodies[k])) {    
     let pixelsInMeter = 80;
-    let point = points[body.id];
-    let collider = colliders[body.id];
+    let point = points[id];
+    let body = bodies[id];
+    let collidersToCheck = colliders[id] || [];
+    let pointOnPlatform = onPlatform(platforms, point.pos, collidersToCheck);
     let newVelocity = Vector.up
       .multiply((9.81 / 10000) * tickDuration * pixelsInMeter)
       .add(body.velocity.multiply(body.dragValue));
     
-    if(collider && newVelocity.y > 0) {
-      if(onPlatform(platforms, point.pos, collider)) {
-        newVelocity.y = 0;
-      }
+    if(newVelocity.y > 0 && pointOnPlatform) {
+      newVelocity.y = 0;
     }
     
     point.pos = point.pos.add(newVelocity);
@@ -138,7 +132,9 @@ function drawGun(ctx, gunPoint, points, connections) {
   
   if(connections[gunPoint.id]) {    
     let attachedToId = connections[gunPoint.id];
-    let attachedToPoint = points[attachedToId];
+    let attachedToPoint = Object
+      .values(points)
+      .find(p => p.id == attachedToId);
     
     gunPos = new Vector(
       attachedToPoint.pos.x + gunPos.x, 
@@ -212,7 +208,7 @@ function tick(ctx, world) {
 function dudeController(
   dudePoint, 
   dudeBody, 
-  dudeCollider, 
+  dudeColliders, 
   dudeAttributes,
   platforms, 
   actions) {  
@@ -226,7 +222,7 @@ function dudeController(
   }
 
   if(actions["jump"]) {
-    if(onPlatform(platforms, dudePoint.pos, dudeCollider)) {
+    if(onPlatform(platforms, dudePoint.pos, dudeColliders)) {
       dudeBody.velocity.y = -(dudeAttributes.jumpForce / dudeBody.mass);
     }
 
@@ -234,12 +230,23 @@ function dudeController(
   }
 }
 
-function onPlatform(platforms, position, collider) {
-  return platforms.some(p => 
-    p.pos.x <= position.x && 
-    p.pos.x >= position.x - p.length &&
-    p.pos.y >= position.y + collider.radius &&
-    p.pos.y <= position.y + collider.radius + 5);
+function onPlatform(platforms, position, colliders) {
+  return platforms.some(p => colliders.some(c => {    
+    let colliderPos = position.add(c.pos);
+    
+    return (
+      p.pos.x <= colliderPos.x && 
+      p.pos.x >= colliderPos.x - p.length &&
+      p.pos.y >= colliderPos.y + c.radius &&
+      p.pos.y <= colliderPos.y + c.radius + 5);  
+  }));
+}
+
+function mapEntity(id, world, entityDesc) {
+  world.points[id] = entityDesc.point;
+  world.colliders[id] = entityDesc.colliders;
+  world.attributes[id] = entityDesc.attributes;
+  world.bodies[id] = entityDesc.body;
 }
 
 function rainbowman(canvas) {
@@ -251,34 +258,36 @@ function rainbowman(canvas) {
     tickDuration: 1,
     connections: {},
     actions: {},
-    points: {
-      "dude": new Point("dude", new Vector(50, 100), Vector.right),
-      "gun": new Point("gun", new Vector(50, 100), Vector.right)
-    },
-    bodies: {  
-      "dude": new Body("dude", 50, Vector.zero, 0.98)
-    },
     platforms: [
-      new Platform("ground", new Vector(0, 300), 300),
-      new Platform("ground", new Vector(400, 400), 300)
+      new Platform("platform-1", new Vector(0, 300), 300),
+      new Platform("platform-2", new Vector(400, 400), 300)
     ],
-    colliders: {
-      "dude": new CircleCollider("dude", 20)
-    },
-    attributes: {
-      "dude": {
-        radius: 20, 
-        jumpForce: 500,
-        runVelocity: 1.5
-      }
-    }
+    points: {},
+    bodies: {},
+    colliders: {},
+    attributes: {}
   };
 
-  attach("gun", "dude", world.points, world.connections);
+  mapEntity("dude", world, {
+    point: new Point("dude-point", new Vector(50, 100), Vector.right),
+    body: new Body("dude-body", 50, Vector.zero, 0.98),
+    colliders: [
+      new CircleCollider("dude-collider-1", 20, Vector.left.multiply(25)), 
+      new CircleCollider("dude-collider-2", 20, Vector.right.multiply(25))],
+    attributes: {
+      radius: 20, 
+      jumpForce: 500,
+      runVelocity: 1.5
+    }
+  });
 
-  setInterval(() => {
-    tick(ctx, world);
-  }, world.tickDuration);
+  mapEntity("gun", world, {
+    point: new Point("gun-point", new Vector(50, 100), Vector.right),
+  });
+
+  attach(world.points["gun"], world.points["dude"], world.connections);
+
+  setInterval(() => tick(ctx, world), world.tickDuration);
   
   addEventListener("keydown", ev => {
     switch(ev.code) {
