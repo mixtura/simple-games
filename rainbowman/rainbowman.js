@@ -1,59 +1,3 @@
-class Vector {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
-  
-  add(x, y) {
-    [x, y] = this._normalizeArgs(arguments);
-  
-    return new Vector(this.x + x, this.y + y);
-  }
-  
-  subtract(x, y) {
-    [x, y] = this._normalizeArgs(arguments);
-    
-    return new Vector(this.x - x, this.y - y);
-  }
-  
-  multiply(val) {
-    return new Vector(this.x * val, this.y * val);
-  }
-
-  moveAlong(vec, val) {
-    let rotation = Math.atan2(vec.x, vec.y);
-
-    return new Vector(
-      this.x + Math.sin(rotation) * val, 
-      this.y + Math.cos(rotation) * val);
-  }
-
-  magnitude() {
-    return Math.sqrt(
-      this.x * this.x + this.y * this.y);
-  }
-
-  normalize() {
-    let magnitude = this.magnitude();
-
-    return new Vector(
-      this.x / magnitude, 
-      this.y / magnitude);
-  }
-
-  _normalizeArgs(args) {
-    return args.length == 1 ?
-      [args[0].x, args[0].y] :
-      [args[0], args[1]];
-  }
-}
-
-Vector.up = new Vector(0, 1);
-Vector.down = new Vector(0, -1);
-Vector.right = new Vector(1, 0);
-Vector.left = new Vector(-1, 0);
-Vector.zero = new Vector(0, 0);
-
 class Body {
   constructor(id, mass, velocity, dragValue) {
     this.id = id;
@@ -64,9 +8,10 @@ class Body {
 }
 
 class Point {
-  constructor(id, pos, direction) {
+  constructor(id, pos, localPos = Vector.zero, direction = Vector.zero) {
     this.id = id;
     this.pos = pos;
+    this.localPos = localPos;
     this.direction = direction;
   }
 }
@@ -88,9 +33,8 @@ class CircleCollider {
 }
 
 class Camera {
-  constructor(id, pos, size) {
+  constructor(id, size) {
     this.id = id;
-    this.pos = pos;
     this.size = size;
   }
 }
@@ -98,12 +42,10 @@ class Camera {
 function attach(point, parentPoint, connections) {
   connections[point.id] = parentPoint.id;
   
-  point.pos = point.pos.subtract(parentPoint.pos);  
+  point.pos = parentPoint.pos;  
 }
 
-function detach(point, parentPoint, connections) {
-  point.pos = point.pos.add(parentPoint.pos);
-  
+function detach(point, connections) {  
   connections[point.id] = null;
 }
 
@@ -136,15 +78,14 @@ function drawGun(ctx, gunPoint, points, connections) {
       .values(points)
       .find(p => p.id == attachedToId);
     
-    gunPos = new Vector(
-      attachedToPoint.pos.x + gunPos.x, 
-      attachedToPoint.pos.y + gunPos.y);    
+    gunPos = attachedToPoint.pos.add(gunPoint.localPos);    
   }
 
   let endPos = gunPos.moveAlong(gunPoint.direction, 50);
 
   ctx.strokeStyle = 'red';
   ctx.lineWidth = 5;
+
   ctx.beginPath();
   ctx.moveTo(gunPos.x, gunPos.y);
   ctx.lineTo(endPos.x, endPos.y);
@@ -157,6 +98,7 @@ function drawDude(ctx, dudePoint, dudeAttributes) {
   
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 5;
+
   ctx.beginPath();
   ctx.arc(dudePos.x, dudePos.y, radius, 0, Math.PI * 2);
   ctx.stroke();
@@ -164,15 +106,48 @@ function drawDude(ctx, dudePoint, dudeAttributes) {
 
 function drawPlatform(ctx, platform) {
   ctx.fillStyle = 'black';
-  ctx.fillRect(platform.pos.x, platform.pos.y, platform.length, 10);
+  ctx.fillRect(
+    platform.pos.x, 
+    platform.pos.y, 
+    platform.length, 
+    10);
 }
 
-function updateGunDirection(dudePoint, gunPoint, pointerPos) {
+function updateGunDirection(dudePoint, gunPoint, camera, pointerPos) {
+  let dudeScreenPos = toScreenPos(camera, dudePoint.pos);
   let dir = pointerPos
-    .subtract(dudePoint.pos)
+    .subtract(dudeScreenPos)
     .normalize();
 
   gunPoint.direction = dir;
+}
+
+function updateCamera(ctx, cameraId, points, attributes) {
+  let point = points[cameraId];
+  let cameraAttrs = attributes[cameraId];
+  let targetPoint = Object.values(points).find(p => p.id == cameraAttrs.targetId);
+  let targetPos = targetPoint.pos.add(point.localPos);
+  let currentPos = point.pos;
+  let translateVec = new Vector(
+    (currentPos.x - targetPos.x) * cameraAttrs.smoothness, 
+    (currentPos.y - targetPos.y) * cameraAttrs.smoothness);
+  
+  point.pos = new Vector(
+    currentPos.x - translateVec.x, 
+    currentPos.y - translateVec.y);
+
+  ctx.translate(translateVec.x, translateVec.y); 
+}
+
+function flashCanvas(ctx, cameraPoint, cameraAttrs) {  
+  let cameraPos = cameraPoint.pos;
+
+  ctx.fillStyle = 'grey';
+  ctx.fillRect(
+    cameraPos.x, 
+    cameraPos.y, 
+    cameraAttrs.width, 
+    cameraAttrs.height);
 }
 
 function tick(ctx, world) {  
@@ -191,13 +166,18 @@ function tick(ctx, world) {
     world.platforms, 
     world.tickDuration);
 
-  updateGunDirection(world.points["dude"], world.points["gun"], world.pointerPos);
+  updateGunDirection(
+    world.points["dude"], 
+    world.points["gun"], 
+    world.points["maincamera"], 
+    world.pointerPos);
+  
+  updateCamera(ctx, "maincamera", world.points, world.attributes);
 
-  ctx.fillStyle = 'grey';
-  ctx.fillRect(0, 0, world.width, world.height);
-  ctx.fillStyle = 'black';
+  flashCanvas(ctx, world.points["maincamera"], world.attributes["maincamera"]);
 
   drawDude(ctx, world.points["dude"], world.attributes["dude"]);
+  
   drawGun(ctx, world.points["gun"], world.points, world.connections);
   
   for(let platform of world.platforms) {
@@ -221,25 +201,41 @@ function dudeController(
     dudeBody.velocity.x = -dudeAttributes.runVelocity;
   }
 
-  if(actions["jump"]) {
-    if(onPlatform(platforms, dudePoint.pos, dudeColliders)) {
-      dudeBody.velocity.y = -(dudeAttributes.jumpForce / dudeBody.mass);
+  if(actions["jump"] && onPlatform(platforms, dudePoint.pos, dudeColliders)) {
+    for(let p of platforms) {
+      p.disable = false;
     }
 
+    dudeBody.velocity.y = -(dudeAttributes.jumpForce / dudeBody.mass);
+  
     actions["jump"] = false;
+  }
+
+  if(actions["down"]) {
+    let platform = onPlatform(platforms, dudePoint.pos, dudeColliders);
+
+    if(platform) {
+      platform.disable = true;
+    }
+
+    actions["down"] = false;
   }
 }
 
 function onPlatform(platforms, position, colliders) {
-  return platforms.some(p => colliders.some(c => {    
+  return platforms.filter(p => !p.disable).find(p => colliders.some(c => {    
     let colliderPos = position.add(c.pos);
-    
+
     return (
       p.pos.x <= colliderPos.x && 
       p.pos.x >= colliderPos.x - p.length &&
       p.pos.y >= colliderPos.y + c.radius &&
       p.pos.y <= colliderPos.y + c.radius + 5);  
   }));
+}
+
+function toScreenPos(camera, pos) {
+  return pos.subtract(camera.pos);
 }
 
 function mapEntity(id, world, entityDesc) {
@@ -253,14 +249,14 @@ function rainbowman(canvas) {
   let ctx = canvas.getContext('2d');
   let world = {
     pointerPos: Vector.zero,
-    width: canvas.width,
-    height: canvas.height,
     tickDuration: 1,
     connections: {},
     actions: {},
     platforms: [
-      new Platform("platform-1", new Vector(0, 300), 300),
-      new Platform("platform-2", new Vector(400, 400), 300)
+      new Platform("platform-1", v(0, 300), 300),
+      new Platform("platform-2", v(100, 400), 700),
+      new Platform("platform-3", v(0, 500), 500),
+      new Platform("platform-4", v(300, 600), 400)
     ],
     points: {},
     bodies: {},
@@ -268,24 +264,36 @@ function rainbowman(canvas) {
     attributes: {}
   };
 
+  mapEntity("maincamera", world, {
+    point: new Point("maincamera-point", v(0, 0), v(-200, -200)),
+    attributes: {
+      size: 1,
+      targetId: "dude-point",
+      smoothness: 0.05,
+      width: canvas.width,
+      height: canvas.height
+    }
+  });
+
   mapEntity("dude", world, {
-    point: new Point("dude-point", new Vector(50, 100), Vector.right),
+    point: new Point("dude-point", v(0, 0), Vector.right),
     body: new Body("dude-body", 50, Vector.zero, 0.98),
     colliders: [
       new CircleCollider("dude-collider-1", 20, Vector.left.multiply(25)), 
       new CircleCollider("dude-collider-2", 20, Vector.right.multiply(25))],
     attributes: {
       radius: 20, 
-      jumpForce: 500,
+      jumpForce: 350,
       runVelocity: 1.5
     }
   });
 
   mapEntity("gun", world, {
-    point: new Point("gun-point", new Vector(50, 100), Vector.right),
+    point: new Point("gun-point", v(50, 100), Vector.zero, Vector.right),
   });
 
   attach(world.points["gun"], world.points["dude"], world.connections);
+  attach(world.points["maincamera"], world.points["dude"], world.connections);
 
   setInterval(() => tick(ctx, world), world.tickDuration);
   
@@ -305,6 +313,11 @@ function rainbowman(canvas) {
       case 'KeyW':
         world.actions['jump'] = true;
         break; 
+      case 'ArrowDown':
+      case 'KeyS':
+        world.actions['down'] = !world.actions['downpressed'];
+        world.actions['downpressed'] = true;
+        break;
     }
   });
 
@@ -317,6 +330,14 @@ function rainbowman(canvas) {
       case 'ArrowRight': 
       case 'KeyD':
         world.actions["right"] = false;
+        break;
+      case 'ArrowUp':
+      case 'KeyW':
+        world.actions['jump'] = false;
+        break; 
+      case 'ArrowDown':
+      case 'KeyS':
+        world.actions['downpressed'] = false;
         break;
     }
   });
