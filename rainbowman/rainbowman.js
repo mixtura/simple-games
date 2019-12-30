@@ -23,17 +23,22 @@ class Vector {
   moveAlong(vec, val) {
     let rotation = Math.atan2(vec.x, vec.y);
 
-    return new Vector(this.x + Math.sin(rotation) * val, this.y + Math.cos(rotation) * val);
+    return new Vector(
+      this.x + Math.sin(rotation) * val, 
+      this.y + Math.cos(rotation) * val);
   }
 
   magnitude() {
-    return Math.sqrt(this.x * this.x + this.y * this.y);
+    return Math.sqrt(
+      this.x * this.x + this.y * this.y);
   }
 
   normalize() {
     let magnitude = this.magnitude();
 
-    return new Vector(this.x / magnitude, this.y / magnitude);
+    return new Vector(
+      this.x / magnitude, 
+      this.y / magnitude);
   }
 
   _normalizeArgs(args) {
@@ -66,6 +71,30 @@ class Point {
   }
 }
 
+class Platform {
+  constructor(id, pos, length) {
+    this.id = id;
+    this.pos = pos;
+    this.length = length;
+  }
+}
+
+class CircleCollider {
+  constructor(id, radius, pos = Vector.zero) {
+    this.id = id;
+    this.radius = radius;
+    this.pos = pos;
+  }
+}
+
+class Camera {
+  constructor(id, pos, size) {
+    this.id = id;
+    this.pos = pos;
+    this.size = size;
+  }
+}
+
 function attach(id, parentId, points, connections) {
   connections[id] = parentId;
 
@@ -84,106 +113,139 @@ function detach(id, points, connections) {
   connections[id] = null;
 }
 
-function simulate(points, bodies, groundColliders, tickDuration) {
+function simulate(points, bodies, colliders, platforms, tickDuration) {
   for(let body of Object.values(bodies)) {    
+    let pixelsInMeter = 80;
     let point = points[body.id];
+    let collider = colliders[body.id];
     let newVelocity = Vector.up
-      .multiply((9.8 / 1000000) * tickDuration * body.mass)
+      .multiply((9.81 / 10000) * tickDuration * pixelsInMeter)
       .add(body.velocity.multiply(body.dragValue));
     
-    let newPos = point.pos.add(newVelocity);
-    let collider = groundColliders[body.id];
-    
-    if(collider && collider.add(newPos).y > 350) {
-      newPos.y = point.pos.y;
-      newVelocity.y = 0;
+    if(collider && newVelocity.y > 0) {
+      if(onPlatform(platforms, point.pos, collider)) {
+        newVelocity.y = 0;
+      }
     }
-
-    point.pos = newPos;
+    
+    point.pos = point.pos.add(newVelocity);
     body.velocity = newVelocity;    
   }
 }
 
-function drawGun(ctx, points, connections) {
-  let point = points['gun'];
-  let pos = point.pos;
+function drawGun(ctx, gunPoint, points, connections) {
+  let gunPos = gunPoint.pos;
   
-  if(connections['gun']) {    
-    let attachedToId = connections['gun'];
+  if(connections[gunPoint.id]) {    
+    let attachedToId = connections[gunPoint.id];
     let attachedToPoint = points[attachedToId];
     
-    pos = new Vector(
-      attachedToPoint.pos.x + pos.x, 
-      attachedToPoint.pos.y + pos.y);    
+    gunPos = new Vector(
+      attachedToPoint.pos.x + gunPos.x, 
+      attachedToPoint.pos.y + gunPos.y);    
   }
 
-  let endPos = pos.moveAlong(point.direction, 50);
+  let endPos = gunPos.moveAlong(gunPoint.direction, 50);
 
   ctx.strokeStyle = 'red';
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.moveTo(pos.x, pos.y);
+  ctx.moveTo(gunPos.x, gunPos.y);
   ctx.lineTo(endPos.x, endPos.y);
   ctx.stroke();
 }
 
-function drawDude(ctx, points, attributes) {
-  let point = points['dude'];
-  let radius = attributes['dude'].radius;
+function drawDude(ctx, dudePoint, dudeAttributes) {
+  let dudePos = dudePoint.pos;
+  let radius = dudeAttributes.radius;
   
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.arc(point.pos.x, point.pos.y, radius, 0, Math.PI * 2);
+  ctx.arc(dudePos.x, dudePos.y, radius, 0, Math.PI * 2);
   ctx.stroke();
 }
 
+function drawPlatform(ctx, platform) {
+  ctx.fillStyle = 'black';
+  ctx.fillRect(platform.pos.x, platform.pos.y, platform.length, 10);
+}
+
+function updateGunDirection(dudePoint, gunPoint, pointerPos) {
+  let dir = pointerPos
+    .subtract(dudePoint.pos)
+    .normalize();
+
+  gunPoint.direction = dir;
+}
+
 function tick(ctx, world) {  
-  controller(
-    world.points,
-    world.groundColliders, 
-    world.bodies, 
+  dudeController(
+    world.points["dude"], 
+    world.bodies["dude"],
+    world.colliders["dude"],
+    world.attributes["dude"],
+    world.platforms,
     world.actions);
 
   simulate(
     world.points, 
     world.bodies, 
-    world.groundColliders, 
+    world.colliders,
+    world.platforms, 
     world.tickDuration);
+
+  updateGunDirection(world.points["dude"], world.points["gun"], world.pointerPos);
 
   ctx.fillStyle = 'grey';
   ctx.fillRect(0, 0, world.width, world.height);
   ctx.fillStyle = 'black';
 
-  drawDude(ctx, world.points, world.attributes);
-  drawGun(ctx, world.points, world.connections);  
+  drawDude(ctx, world.points["dude"], world.attributes["dude"]);
+  drawGun(ctx, world.points["gun"], world.points, world.connections);
+  
+  for(let platform of world.platforms) {
+    drawPlatform(ctx, platform);
+  }
 }
 
-function controller(pointers, groundColliders, bodies, actions) {
-  let dudePoints = pointers["dude"];
-  let dudeBody = bodies["dude"];
-  let dudeGroundCollider = groundColliders["dude"];
-
+function dudeController(
+  dudePoint, 
+  dudeBody, 
+  dudeCollider, 
+  dudeAttributes,
+  platforms, 
+  actions) {  
+  
   if(actions["right"]) {
-    dudeBody.velocity.x = 1;
+    dudeBody.velocity.x = dudeAttributes.runVelocity;
   }
 
   if(actions["left"]) {
-    dudeBody.velocity.x = -1;
+    dudeBody.velocity.x = -dudeAttributes.runVelocity;
   }
 
   if(actions["jump"]) {
-    if(dudeGroundCollider.add(dudePoints.pos).y >= 348) {
-      dudeBody.velocity.y = -2;
+    if(onPlatform(platforms, dudePoint.pos, dudeCollider)) {
+      dudeBody.velocity.y = -(dudeAttributes.jumpForce / dudeBody.mass);
     }
+
     actions["jump"] = false;
   }
 }
 
+function onPlatform(platforms, position, collider) {
+  return platforms.some(p => 
+    p.pos.x <= position.x && 
+    p.pos.x >= position.x - p.length &&
+    p.pos.y >= position.y + collider.radius &&
+    p.pos.y <= position.y + collider.radius + 5);
+}
+
 function rainbowman(canvas) {
   let ctx = canvas.getContext('2d');
-
   let world = {
+    pointerPos: Vector.zero,
     width: canvas.width,
     height: canvas.height,
     tickDuration: 1,
@@ -194,14 +256,20 @@ function rainbowman(canvas) {
       "gun": new Point("gun", new Vector(50, 100), Vector.right)
     },
     bodies: {  
-      "dude": new Body("dude", 7000, Vector.zero, 0.98)
+      "dude": new Body("dude", 50, Vector.zero, 0.98)
     },
-    groundColliders: {
-      "dude": Vector.down.multiply(50)
+    platforms: [
+      new Platform("ground", new Vector(0, 300), 300),
+      new Platform("ground", new Vector(400, 400), 300)
+    ],
+    colliders: {
+      "dude": new CircleCollider("dude", 20)
     },
     attributes: {
       "dude": {
-        radius: 50
+        radius: 20, 
+        jumpForce: 500,
+        runVelocity: 1.5
       }
     }
   };
@@ -215,14 +283,17 @@ function rainbowman(canvas) {
   addEventListener("keydown", ev => {
     switch(ev.code) {
       case 'ArrowLeft':
+      case 'KeyA':        
         world.actions["right"] = false; 
         world.actions["left"] = true;
         break;
       case 'ArrowRight': 
+      case 'KeyD':
         world.actions["left"] = false;
         world.actions["right"] = true;
         break;
       case 'ArrowUp':
+      case 'KeyW':
         world.actions['jump'] = true;
         break; 
     }
@@ -230,22 +301,18 @@ function rainbowman(canvas) {
 
   addEventListener("keyup", ev => {
     switch(ev.code) {
-      case 'ArrowLeft': 
+      case 'ArrowLeft':
+      case 'KeyA': 
         world.actions["left"] = false;
         break;
-      case 'ArrowRight':
+      case 'ArrowRight': 
+      case 'KeyD':
         world.actions["right"] = false;
         break;
     }
   });
 
   addEventListener("mousemove", ev => {
-    let dudePoint = world.points["dude"];
-    let gunPoint = world.points["gun"];
-    let dir = new Vector(ev.clientX, ev.clientY)
-      .subtract(dudePoint.pos)
-      .normalize();
-
-    gunPoint.direction = dir;
+    world.pointerPos = new Vector(ev.clientX, ev.clientY);
   });
 }
