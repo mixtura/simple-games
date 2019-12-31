@@ -57,3 +57,9 @@ Vector.zero = new Vector(0, 0);
 function v(x, y) {
   return new Vector(x, y);
 }
+
+v.up = Vector.up;
+v.down = Vector.down;
+v.right = Vector.right;
+v.left = Vector.left;
+v.zero = Vector.zero;
