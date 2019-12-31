@@ -212,7 +212,9 @@ function dudeController(
   }
 
   if(actions["jump"] && platform) {    
-    let isTimeToJump = new Date() - attributes.landingTime > attributes.jumpCooldown;
+    let isTimeToJump = 
+      (new Date() - attributes.landingTime) > attributes.jumpCooldown;
+    
     if(isTimeToJump) {
       for(let p of platforms) {
         p.disable = false;
@@ -225,12 +227,15 @@ function dudeController(
     }
   }
 
-  if(actions["down"]) {
-    if(platform) {
-      platform.disable = true;
-    }
+  if(actions["fall"] && platform) {
+    let isTimeToFall = 
+      (new Date() - attributes.landingTime) > attributes.fallCooldown;
 
-    actions["down"] = false;
+    if(isTimeToFall) {
+      platform.disable = true;
+      actions["fall"] = false;
+      attributes.landingTime = null;
+    }
   }
 }
 
@@ -309,6 +314,7 @@ function rainbowman(canvas) {
       jumpForce: 350,
       runVelocity: 1.5,
       jumpCooldown: 100,
+      fallCooldown: 100,
       landingTime: 0
     }
   });
@@ -343,8 +349,7 @@ function rainbowman(canvas) {
         break; 
       case 'ArrowDown':
       case 'KeyS':
-        world.actions['down'] = !world.actions['downpressed'];
-        world.actions['downpressed'] = true;
+        world.actions['fall'] = true;
         break;
     }
   });
@@ -365,7 +370,7 @@ function rainbowman(canvas) {
         break; 
       case 'ArrowDown':
       case 'KeyS':
-        world.actions['downpressed'] = false;
+        world.actions['fall'] = false;
         break;
     }
   });
