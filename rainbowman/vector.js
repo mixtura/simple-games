@@ -24,21 +24,25 @@ class Vector {
     let rotation = Math.atan2(vec.x, vec.y);
   
     return new Vector(
-    this.x + Math.sin(rotation) * val, 
-    this.y + Math.cos(rotation) * val);
+      this.x + Math.sin(rotation) * val, 
+      this.y + Math.cos(rotation) * val);
+  }
+
+  distance(vecTarget) {
+    return Math.sqrt(Math.pow(vecTarget.x - this.x, 2) + Math.pow(vecTarget.y - this.y, 2));
   }
   
   magnitude() {
     return Math.sqrt(
-    this.x * this.x + this.y * this.y);
+      this.x * this.x + this.y * this.y);
   }
   
   normalize() {
     let magnitude = this.magnitude();
   
     return new Vector(
-    this.x / magnitude, 
-    this.y / magnitude);
+      this.x / magnitude, 
+      this.y / magnitude);
   }
   
   _normalizeArgs(args) {

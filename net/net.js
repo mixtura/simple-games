@@ -98,7 +98,7 @@ function drawLines(ctx, lines, maxLength) {
 
 var dotsCount = 300;
 var speedFactor = 0.8;
-var dots = [];
+var points = [];
 var width = window.innerWidth;
 var height = window.innerHeight;
 var maxDistance = 130; 
@@ -131,7 +131,7 @@ while(--dotsCount != 0) {
     randSize,
     randColor);
   
-  dots.push(dot);
+  points.push(dot);
 }
 
 var ctx = document.getElementById("canvas").getContext('2d');
@@ -147,14 +147,14 @@ setInterval(function() {
   ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   
-  for(var dot of dots) {
+  for(var dot of points) {
     moveDot(dot, width, height, maxDistance, speedFactor);
   }
     
-  var lines = getLines(dots, maxDistance);
+  var lines = getLines(points, maxDistance);
   
   drawLines(ctx, lines, maxDistance);  
-  drawDots(ctx, dots)  
+  drawDots(ctx, points)  
 }, 15);
 
 window.addEventListener("resize", function() {
