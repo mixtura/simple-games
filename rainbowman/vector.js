@@ -29,7 +29,9 @@ class Vector {
   }
 
   distance(vecTarget) {
-    return Math.sqrt(Math.pow(vecTarget.x - this.x, 2) + Math.pow(vecTarget.y - this.y, 2));
+    return Math.sqrt(
+      Math.pow(vecTarget.x - this.x, 2) + 
+      Math.pow(vecTarget.y - this.y, 2));
   }
   
   magnitude() {
@@ -46,9 +48,9 @@ class Vector {
   }
   
   _normalizeArgs(args) {
-    return args.length == 1 ?
-    [args[0].x, args[0].y] :
-    [args[0], args[1]];
+    return args.length == 1 
+      ? [args[0].x, args[0].y] 
+      : [args[0], args[1]];
   }
 }
   

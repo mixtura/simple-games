@@ -1,3 +1,46 @@
+class Point {
+  constructor(id, pos, localPos = v.zero, direction = v.zero) {
+    this.id = id;
+    this.pos = pos;
+    this.localPos = localPos;
+    this.direction = direction;
+  }
+}
+
+class Body {
+  constructor(id, mass, velocity, dragFactor, bounceFactor = 0) {
+    this.id = id;
+    this.mass = mass;
+    this.velocity = velocity;
+    this.dragFactor = dragFactor;
+    this.bounceFactor = bounceFactor;
+  }
+}
+
+class Platform {
+  constructor(id, pos, length) {
+    this.id = id;
+    this.pos = pos;
+    this.length = length;
+  }
+}
+
+class CircleCollider {
+  constructor(id, radius, pos = v.zero, bypassPlatforms = {}) {
+    this.id = id;
+    this.radius = radius;
+    this.pos = pos;
+    this.bypassPlatforms = bypassPlatforms;
+  }
+}
+
+class Camera {
+  constructor(id, size) {
+    this.id = id;
+    this.size = size;
+  }
+}
+
 function attach(point, parentPoint, connections) {
   connections[point.id] = parentPoint.id;  
   point.pos = parentPoint.pos;  

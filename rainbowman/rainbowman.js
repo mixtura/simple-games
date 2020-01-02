@@ -1,56 +1,3 @@
-class Body {
-  constructor(id, mass, velocity, dragFactor, bounceFactor = 0) {
-    this.id = id;
-    this.mass = mass;
-    this.velocity = velocity;
-    this.dragFactor = dragFactor;
-    this.bounceFactor = bounceFactor;
-  }
-}
-
-class Point {
-  constructor(id, pos, localPos = v.zero, direction = v.zero) {
-    this.id = id;
-    this.pos = pos;
-    this.localPos = localPos;
-    this.direction = direction;
-  }
-}
-
-class Satellite {
-  constructor(id, accelaration, targetId, dragFactor, velocity = v.zero) {
-    this.id = id;
-    this.accelaration = accelaration;
-    this.targetId = targetId;
-    this.dragFactor = dragFactor;
-    this.velocity = velocity;
-  }
-}
-
-class Platform {
-  constructor(id, pos, length) {
-    this.id = id;
-    this.pos = pos;
-    this.length = length;
-  }
-}
-
-class CircleCollider {
-  constructor(id, radius, pos = v.zero, bypassPlatforms = {}) {
-    this.id = id;
-    this.radius = radius;
-    this.pos = pos;
-    this.bypassPlatforms = bypassPlatforms;
-  }
-}
-
-class Camera {
-  constructor(id, size) {
-    this.id = id;
-    this.size = size;
-  }
-}
-
 function simulate(points, bodies, colliders, platforms, tickDuration) {
   for(let id of Object.keys(bodies).filter(k => bodies[k])) {    
     let point = points[id];
@@ -111,13 +58,11 @@ function updateCamera(ctx, cameraEntity, points) {
     .pos
     .add(point.localPos);
   
-  let translateVec = new Vector(
-    (currentPos.x - targetPos.x) * cameraAttrs.smoothness, 
-    (currentPos.y - targetPos.y) * cameraAttrs.smoothness);
+  let translateVec = currentPos
+    .subtract(targetPos)
+    .multiply(cameraAttrs.smoothness);
   
-  point.pos = new Vector(
-    currentPos.x - translateVec.x, 
-    currentPos.y - translateVec.y);
+  point.pos = currentPos.subtract(translateVec);
 
   ctx.translate(translateVec.x, translateVec.y); 
 }
@@ -137,14 +82,13 @@ function spawnBall(world, pos) {
 
 function flashCanvas(ctx, cameraEntity) {  
   let cameraPos = cameraEntity.point.pos;
-  let cameraScale = cameraEntity.attributes.scale;
 
   ctx.fillStyle = "grey";
   ctx.fillRect(
-    cameraPos.x * (2 - cameraScale), 
-    cameraPos.y * (2 - cameraScale), 
-    cameraEntity.attributes.width * (2 - cameraScale), 
-    cameraEntity.attributes.height * (2 - cameraScale));
+    cameraPos.x, 
+    cameraPos.y, 
+    cameraEntity.attributes.width, 
+    cameraEntity.attributes.height);
 }
 
 function drawGun(ctx, gunEntity, points, connections) {
@@ -249,8 +193,8 @@ function dudeController(
 
   let {body, attributes, colliders, point} = dudeEntity;
   let {platforms, actions} = world;
-  let platform = onPlatform(platforms, point.pos, colliders);
   let {jumpCooldown, fallCooldown, landingTime} = attributes;
+  let platform = onPlatform(platforms, point.pos, colliders);
 
   if(platform && !landingTime) {
     attributes.landingTime = landingTime = new Date();
