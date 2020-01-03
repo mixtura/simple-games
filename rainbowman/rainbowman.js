@@ -1,3 +1,13 @@
+import v from "./vector.js";
+import {
+  Point, 
+  Body, 
+  CircleCollider, 
+  mapEntity, 
+  selectEntity, 
+  toScreenPos} 
+from "./world.js";
+
 function simulate(points, bodies, colliders, platforms, tickDuration) {
   for(let id of Object.keys(bodies).filter(k => bodies[k])) {    
     let point = points[id];
@@ -68,7 +78,7 @@ function spawnBall(world, pos) {
   let id = "ball" + Date.now();
 
   mapEntity(id, world, {
-    point: new Point(v(pos.x, pos.y), v(0, 0), v.zero),
+    point: new Point(new v(pos.x, pos.y), new v(0, 0), v.zero),
     colliders: [new CircleCollider(id + "-collider", 10)],
     body: new Body(10, v.zero, 0.98, 0.7),
     attributes: { radius: 10 },
@@ -147,41 +157,6 @@ function drawBall(ctx, ball) {
   ctx.stroke();
 }
 
-function tick(ctx, world) { 
-  dudeController(
-    selectEntity("dude", world),
-    world);
-
-  simulate(
-    world.points, 
-    world.bodies,
-    world.colliders,
-    world.platforms, 
-    world.tickDuration);
-
-  updateGunDirection(
-    world.points["dude"], 
-    world.points["gun"], 
-    world.points["maincamera"], 
-    world.pointerPos);
-  
-  updateCamera(ctx, selectEntity("maincamera", world), world.points);
-
-  flashCanvas(ctx, selectEntity("maincamera", world));
-
-  drawDude(ctx, selectEntity("dude", world));
-  
-  drawGun(ctx, selectEntity("gun", world), world.points, world.connections);
-
-  for(let ballId of Object.keys(world.points).filter(k => k.startsWith("ball"))) {
-    drawBall(ctx, selectEntity(ballId, world));
-  }
-
-  for(let platform of world.platforms) {
-    drawPlatform(ctx, platform);
-  }
-}
-
 function dudeController(
   dudeEntity,
   world) {
@@ -237,5 +212,40 @@ function dudeController(
     body.velocity = body.velocity.subtract(ballBody.velocity.multiply(0.1));
 
     actions["fire"] = false;
+  }
+}
+
+export function tick(ctx, world) { 
+  dudeController(
+    selectEntity("dude", world),
+    world);
+
+  simulate(
+    world.points, 
+    world.bodies,
+    world.colliders,
+    world.platforms, 
+    world.tickDuration);
+
+  updateGunDirection(
+    world.points["dude"], 
+    world.points["gun"], 
+    world.points["maincamera"], 
+    world.pointerPos);
+  
+  updateCamera(ctx, selectEntity("maincamera", world), world.points);
+
+  flashCanvas(ctx, selectEntity("maincamera", world));
+
+  drawDude(ctx, selectEntity("dude", world));
+  
+  drawGun(ctx, selectEntity("gun", world), world.points, world.connections);
+
+  for(let ballId of Object.keys(world.points).filter(k => k.startsWith("ball"))) {
+    drawBall(ctx, selectEntity(ballId, world));
+  }
+
+  for(let platform of world.platforms) {
+    drawPlatform(ctx, platform);
   }
 }

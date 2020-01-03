@@ -1,17 +1,17 @@
-class Vector {
+export default class Vector {
   constructor(x, y) {
     this.x = x;
     this.y = y;
   }
   
   add(x, y) {
-    [x, y] = this._normalizeArgs(arguments);
+    [x, y] = normalizeArgs(arguments);
   
     return new Vector(this.x + x, this.y + y);
   }
   
   subtract(x, y) {
-    [x, y] = this._normalizeArgs(arguments);
+    [x, y] = normalizeArgs(arguments);
     
     return new Vector(this.x - x, this.y - y);
   }
@@ -45,27 +45,17 @@ class Vector {
     return new Vector(
       this.x / magnitude, 
       this.y / magnitude);
-  }
-  
-  _normalizeArgs(args) {
-    return args.length == 1 
-      ? [args[0].x, args[0].y] 
-      : [args[0], args[1]];
-  }
+  }  
 }
-  
+
+function normalizeArgs(args) {
+  return args.length == 1 
+    ? [args[0].x, args[0].y] 
+    : [args[0], args[1]];
+}
+
 Vector.up = new Vector(0, 1);
 Vector.down = new Vector(0, -1);
 Vector.right = new Vector(1, 0);
 Vector.left = new Vector(-1, 0);
 Vector.zero = new Vector(0, 0);
-
-function v(x, y) {
-  return new Vector(x, y);
-}
-
-v.up = Vector.up;
-v.down = Vector.down;
-v.right = Vector.right;
-v.left = Vector.left;
-v.zero = Vector.zero;

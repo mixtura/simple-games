@@ -1,3 +1,18 @@
+import v from "./vector.js";
+import {tick} from "./rainbowman.js";
+import {
+  Point, 
+  Body, 
+  Platform, 
+  CircleCollider, 
+  DudeAttributes,
+  CameraAttributes,
+  GunAttributes,
+  World,
+  attach, 
+  mapEntity} 
+from "./world.js";
+
 function bindEvents(world, ctx) {  
   setInterval(() => tick(ctx, world), world.tickDuration);
   
@@ -54,37 +69,31 @@ function bindEvents(world, ctx) {
   });
 
   addEventListener("mousemove", ev => {
-    world.pointerPos = new Vector(ev.clientX, ev.clientY);
+    world.pointerPos = new v(ev.clientX, ev.clientY);
   });
 }
 
 function initWorld() {
-  let world = {
+  let world = new World({
     pointerPos: v.zero,
     tickDuration: 1,
-    connections: {},
-    actions: {},
     platforms: [
-      new Platform("platform-1", v(0, 300), 300),
-      new Platform("platform-2", v(100, 400), 700),
-      new Platform("platform-3", v(0, 500), 500),
-      new Platform("platform-4", v(300, 600), 400)
-    ],
-    points: {},
-    bodies: {},
-    colliders: {},
-    attributes: {}
-  };
+      new Platform("platform-1", new v(0, 300), 300),
+      new Platform("platform-2", new v(100, 400), 700),
+      new Platform("platform-3", new v(0, 500), 500),
+      new Platform("platform-4", new v(300, 600), 400)
+    ]
+  });
 
   mapEntity("maincamera", world, {
-    point: new Point(v.zero, v(-canvas.width/2, -canvas.height/2)),
-    attributes: {
+    point: new Point(v.zero, new v(-canvas.width/2, -canvas.height/2)),
+    attributes: new CameraAttributes({
       scale: 1,
       targetId: "dude",
       smoothness: 0.05,
       width: canvas.width,
       height: canvas.height
-    }
+    })
   });
 
   mapEntity("dude", world, {
@@ -93,24 +102,21 @@ function initWorld() {
     colliders: [
       new CircleCollider("dude-collider-1", 20, v.left.multiply(25)), 
       new CircleCollider("dude-collider-2", 20, v.right.multiply(25))],
-    attributes: {
+    attributes: new DudeAttributes({
       radius: 20, 
       jumpForce: 350,
       runVelocity: 2.5,
       jumpCooldown: 100,
       fallCooldown: 100,
-      fireCooldown: 100,
-      landingTime: 0,
-      fireTime: 0,
-      passPlatform: false
-    }
+      fireCooldown: 100
+    })
   });
 
   mapEntity("gun", world, {
     point: new Point(v.zero, v.zero, v.right),
-    attributes: {
+    attributes: new GunAttributes({
       length: 20
-    }
+    })
   });
 
   attach("gun", "dude", world.connections);
@@ -118,7 +124,7 @@ function initWorld() {
   return world;
 }
 
-function rainbowman(canvas) {
+export function rainbowman(canvas) {
   let ctx = canvas.getContext("2d");
   let world = initWorld();
 
