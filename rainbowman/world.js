@@ -1,6 +1,5 @@
 class Point {
-  constructor(id, pos, localPos = v.zero, direction = v.zero) {
-    this.id = id;
+  constructor(pos, localPos = v.zero, direction = v.zero) {
     this.pos = pos;
     this.localPos = localPos;
     this.direction = direction;
@@ -8,8 +7,7 @@ class Point {
 }
 
 class Body {
-  constructor(id, mass, velocity, dragFactor, bounceFactor = 0) {
-    this.id = id;
+  constructor(mass, velocity, dragFactor, bounceFactor = 0) {
     this.mass = mass;
     this.velocity = velocity;
     this.dragFactor = dragFactor;
@@ -34,20 +32,12 @@ class CircleCollider {
   }
 }
 
-class Camera {
-  constructor(id, size) {
-    this.id = id;
-    this.size = size;
-  }
+function attach(id, parentId, connections) {
+  connections[id] = parentId;
 }
 
-function attach(point, parentPoint, connections) {
-  connections[point.id] = parentPoint.id;  
-  point.pos = parentPoint.pos;  
-}
-
-function detach(point, connections) {  
-  connections[point.id] = null;
+function detach(id, connections) {  
+  connections[id] = null;
 }
 
 function toScreenPos(worldShift, pos) {
@@ -72,13 +62,14 @@ function isOnScreen(worldShift, pos) {
 
 function mapEntity(id, world, entityDesc) {
   world.points[id] = entityDesc.point;
+  world.bodies[id] = entityDesc.body;
   world.colliders[id] = entityDesc.colliders;
   world.attributes[id] = entityDesc.attributes;
-  world.bodies[id] = entityDesc.body;
 }
 
 function selectEntity(id, world) {
   return {
+    id: id,
     point: world.points[id],
     colliders: world.colliders[id],
     attributes: world.attributes[id],

@@ -5,8 +5,8 @@ function bindEvents(world, ctx) {
     switch(ev.code) {
       case "ArrowLeft":
       case "KeyA":        
-        world.actions["right"] = false; 
         world.actions["left"] = true;
+        world.actions["right"] = false; 
         break;
       case "ArrowRight": 
       case "KeyD":
@@ -45,11 +45,11 @@ function bindEvents(world, ctx) {
     }
   });
 
-  addEventListener("mousedown", ev => {
+  addEventListener("mousedown", _ => {
     world.actions["fire"] = true;
   });
   
-  addEventListener("mouseup", ev => {
+  addEventListener("mouseup", _ => {
     world.actions["fire"] = false;
   });
 
@@ -77,10 +77,10 @@ function initWorld() {
   };
 
   mapEntity("maincamera", world, {
-    point: new Point("maincamera-point", v(0, 0), v(-canvas.width/2, -canvas.height/2)),
+    point: new Point(v.zero, v(-canvas.width/2, -canvas.height/2)),
     attributes: {
       scale: 1,
-      targetId: "dude-point",
+      targetId: "dude",
       smoothness: 0.05,
       width: canvas.width,
       height: canvas.height
@@ -88,8 +88,8 @@ function initWorld() {
   });
 
   mapEntity("dude", world, {
-    point: new Point("dude-point", v(0, 0), v.zero, v.right),
-    body: new Body("dude-body", 50, v.zero, 0.98),
+    point: new Point(v.zero, v.zero, v.right),
+    body: new Body(50, v.zero, 0.98),
     colliders: [
       new CircleCollider("dude-collider-1", 20, v.left.multiply(25)), 
       new CircleCollider("dude-collider-2", 20, v.right.multiply(25))],
@@ -107,13 +107,13 @@ function initWorld() {
   });
 
   mapEntity("gun", world, {
-    point: new Point("gun-point", v(0, 0), v.zero, v.right),
+    point: new Point(v.zero, v.zero, v.right),
     attributes: {
       length: 20
     }
   });
 
-  attach(world.points["gun"], world.points["dude"], world.connections);
+  attach("gun", "dude", world.connections);
 
   return world;
 }

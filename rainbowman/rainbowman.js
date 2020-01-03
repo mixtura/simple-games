@@ -52,10 +52,7 @@ function updateCamera(ctx, cameraEntity, points) {
   let cameraAttrs = cameraEntity.attributes;
   let currentPos = point.pos;
   
-  let targetPos = Object
-    .values(points)
-    .find(p => p.id == cameraAttrs.targetId)
-    .pos
+  let targetPos = points[cameraAttrs.targetId].pos
     .add(point.localPos);
   
   let translateVec = currentPos
@@ -71,9 +68,9 @@ function spawnBall(world, pos) {
   let id = "ball" + Date.now();
 
   mapEntity(id, world, {
-    point: new Point(id + "-point", v(pos.x, pos.y), v(0, 0), v.zero),
+    point: new Point(v(pos.x, pos.y), v(0, 0), v.zero),
     colliders: [new CircleCollider(id + "-collider", 10)],
-    body: new Body(id + "-body", 10, v.zero, 0.98, 0.7),
+    body: new Body(10, v.zero, 0.98, 0.7),
     attributes: { radius: 10 },
   });
 
@@ -96,12 +93,10 @@ function drawGun(ctx, gunEntity, points, connections) {
   let gunPoint = gunEntity.point;
   let gunLength = gunEntity.attributes.length;
   
-  if(connections[gunPoint.id]) {    
-    let attachedToId = connections[gunPoint.id];
-    let attachedToPoint = Object
-      .values(points)
-      .find(p => p.id == attachedToId);
-    
+  if(connections[gunEntity.id]) {    
+    let attachedToId = connections[gunEntity.id];
+    let attachedToPoint = points[attachedToId];
+
     gunStartPos = attachedToPoint.pos
       .add(gunPoint.localPos);    
   }
