@@ -1,0 +1,19 @@
+{
+  "name": "rainbowman",
+  "version": "1.0.0",
+  "description": "build: tsc\r local run: npx serve",
+  "main": "output/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/websocket": "^1.0.0",
+    "ts-toolbelt": "^6.1.5",
+    "websocket": "^1.0.31"
+  },
+  "devDependencies": {
+    "typescript": "^3.7.4"
+  }
+}
