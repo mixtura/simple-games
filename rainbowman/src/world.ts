@@ -1,20 +1,24 @@
 import Vector from "./vector.js"
 import {Exact} from "./utilities.js"
+import {Action} from "./actions.js"
 
 export class Point {
-  constructor(
-    pos: Vector, 
+  constructor( 
     localPos = Vector.zero, 
     direction = Vector.zero) {
     
-    this.pos = pos;
+    this.originPos = Vector.zero;
     this.localPos = localPos;
     this.direction = direction;
   }
 
-  pos: Vector;
+  originPos: Vector;
   localPos: Vector;
   direction: Vector;
+
+  pos() {
+    return this.originPos.add(this.localPos);
+  }
 }
 
 export class Body {
@@ -75,7 +79,8 @@ export interface CameraAttributes {
   targetId: string,
   smoothness: number,
   width: number,
-  height: number
+  height: number,
+  shift: Vector
 }
 
 export interface DudeAttributes {
@@ -86,7 +91,9 @@ export interface DudeAttributes {
   fallCooldown: number, 
   fireCooldown: number,
   landingTime: number, 
-  fireTime: number
+  fireTime: number,
+  state: Set<string>
+  currentGunId: string;
 }
 
 export interface GunAttributes {
@@ -124,12 +131,12 @@ export interface World {
   pointerPos: Vector,
   tickDuration: number,
   connections: Map<string, string>,
-  actions: Set<string>,
   platforms: Array<Platform>,
   points: Map<string, Point>,
   bodies: Map<string, Body>,
   colliders: Map<string, CircleCollider[]>,
   attributes: Map<string, {}>
+  actionsLog: Action[]
 }
 
 export function worldFactory(tickDuration: number) : World {
@@ -137,43 +144,48 @@ export function worldFactory(tickDuration: number) : World {
     pointerPos: Vector.zero,
     tickDuration: tickDuration,
     connections: new Map<string, string>(),
-    actions: new Set<string>(),
     platforms: [],
     points: new Map<string, Point>(),
     bodies: new Map<string, Body>(),
     colliders: new Map<string, CircleCollider[]>(),
-    attributes: new Map<string, {}>()
+    attributes: new Map<string, {}>(),
+    actionsLog: []
   };
 }
 
-export function attach(id: string, parentId: string, connections: Map<string, string>) {
-  connections.set(id, parentId);
-}
-
-export function detach(id: string, connections: Map<string, string>) {  
-  connections.delete(id);
-}
-
-export function toScreenPos(worldShift: Vector, pos: Vector) {
-  return pos.subtract(worldShift);
-}
-
-export function toWorldPos(worldShift: Vector, pos: Vector) {
-  return pos.add(worldShift);
-}
-
-export function isOnScreen(worldShift: Vector, camAttr: CameraAttributes, pos: Vector) {
-  let posInScreenCoordinates = toScreenPos(worldShift, pos);
+export function attach(
+  id: string, 
+  parentId: string,
+  points: Map<string, Point>, 
+  connections: Map<string, string>) {
   
-  return ( 
-    posInScreenCoordinates.x > camAttr.width ||
-    posInScreenCoordinates.x < 0 ||
-    posInScreenCoordinates.y > camAttr.height ||
-    posInScreenCoordinates.y < 0
-  );
+  let point = points.get(id);
+  let parentPoint = points.get(parentId)
+  
+  if(point && parentPoint) {
+    point.originPos = parentPoint.localPos;
+    connections.set(id, parentId);
+  }
 }
 
-export function mapEntity<T extends EntityShape>(world: World, entity: Exact<EntityShape, T>) {
+export function detach(
+  id: string, 
+  points: Map<string, Point>, 
+  connections: Map<string, string>) { 
+  
+  let point = points.get(id);
+  
+  if(point) {
+    point.localPos = point.originPos.add(point.localPos);
+    point.originPos = Vector.zero;
+    connections.delete(id);
+  }
+}
+
+export function mapEntity<T extends EntityShape>(
+  world: World, 
+  entity: Exact<EntityShape, T>) {
+  
   let id = entity.id;
   
   world.points.set(id, entity.point);
@@ -191,7 +203,10 @@ export function mapEntity<T extends EntityShape>(world: World, entity: Exact<Ent
   }
 }
 
-export function selectEntity<T extends EntityShape>(id: string, world: World) : T {
+export function selectEntity<T extends EntityShape>(
+  id: string, 
+  world: World) : T {
+  
   return <T>{
     id: id,
     point: world.points.get(id) as Point,
@@ -199,4 +214,13 @@ export function selectEntity<T extends EntityShape>(id: string, world: World) : 
     body: world.bodies.get(id),
     attributes: world.attributes.get(id)
   };
+}
+
+export function selectEntities<T extends EntityShape>(
+  idPefix: string, 
+  world: World) : T[] {
+  
+  return Array.from(world.points.keys())
+    .filter(k => k.startsWith(idPefix))
+    .map(id => selectEntity<T>(id, world));
 }

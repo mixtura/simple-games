@@ -1,11 +1,12 @@
 import v from "./vector.js";
 import { tick } from "./rainbowman.js";
-import { World } from "./world.js";
-import { initWorld } from "./init";
-import { processAction } from "./actions.js";
+import { World, Point } from "./world.js";
+import { initWorld } from "./init.js";
+import { redraw } from "./render.js";
 
 function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {  
-  setInterval(() => tick(ctx, world), world.tickDuration);
+  setInterval(() => tick(world), world.tickDuration);
+  setInterval(() => redraw(world, ctx), world.tickDuration);
 
   let getActionNameByCode = (code: string) => {
     switch(code) {
@@ -31,7 +32,8 @@ function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {
     const actionName = getActionNameByCode(ev.code);
 
     if(actionName) {
-      processAction(world, {
+      world.actionsLog.push({
+        id: "dude1",
         startTime: new Date(),
         name: actionName
       });
@@ -42,7 +44,8 @@ function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {
     const actionName = getActionNameByCode(ev.code);
 
     if(actionName) {
-      processAction(world, {
+      world.actionsLog.push({
+        id: "dude1",
         endTime: new Date(),
         name: actionName
       });
@@ -50,25 +53,39 @@ function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {
   });
 
   addEventListener("mousedown", _ => {
-    processAction(world, {
+    world.actionsLog.push({
+      id: "dude1",
       startTime: new Date(),
       name: "fire"
     });
   });
 
   addEventListener("mouseup", _ => {
-    processAction(world, {
+    world.actionsLog.push({
+      id: "dude1",
       endTime: new Date(),
       name: "fire"
     }); 
   });
 
   addEventListener("mousemove", ev => {
-    processAction(world, {
-      startTime: new Date(),
-      name: "pointerposchange",
-      dir: new v(ev.clientX, ev.clientY)
-    });
+    let last = world.actionsLog[world.actionsLog.length - 1];
+    let cameraPoint = world.points.get("maincamera") as Point 
+    let pointerWorldPos = new v(
+      ev.clientX + cameraPoint.pos().x, 
+      ev.clientY + cameraPoint.pos().y);
+
+    if(last && last.name == "pointerposchange") {
+      last.pos = pointerWorldPos; 
+    }
+    else {
+      world.actionsLog.push({
+        id: "dude1",
+        startTime: new Date(),
+        name: "pointerposchange",
+        pos: pointerWorldPos
+      });
+    }
   });
 }
 
