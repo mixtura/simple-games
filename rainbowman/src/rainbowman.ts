@@ -8,7 +8,8 @@ import {
   DudeEntityShape, 
   mapEntity, 
   selectEntities,
-  DudeAttributes
+  DudeAttributes,
+  IdToComponentMap
 } from "./world.js";
 
 import { 
@@ -19,16 +20,16 @@ import {
 } from "./actions.js";
 
 function simulate(
-  points: Map<string, Point>, 
-  bodies: Map<string, Body>, 
-  colliders: Map<string, CircleCollider[]>, 
+  points: IdToComponentMap<Point>, 
+  bodies: IdToComponentMap<Body>, 
+  colliders: IdToComponentMap<CircleCollider[]>, 
   platforms: Platform[], 
   tickDuration: number) {
   
-  for(let id of bodies.keys()) {    
-    let point = points.get(id) as Point;
-    let body = bodies.get(id) as Body;
-    let collidersToCheck = colliders.get(id) || [];
+  for(let id of Object.keys(bodies)) {    
+    let point = points[id] as Point;
+    let body = bodies[id] as Body;
+    let collidersToCheck = colliders[id] || [];
     let pointOnPlatform = onPlatform(point.pos(), platforms, collidersToCheck);    
     let newVelocity = simulateGravity(body.velocity, body.dragFactor, tickDuration);
     
@@ -90,12 +91,12 @@ function spawnBall(world: World, pos: v, radius: number) {
 }
 
 function updatePoints(
-  points: Map<string, Point>,
-  connections: Map<string, string>) {
+  points: IdToComponentMap<Point>,
+  connections: IdToComponentMap<string>) {
 
-  for(let [connectedId, connectedToId] of connections.entries()) {
-    let connectedPoint = points.get(connectedId) as Point;
-    let connectedToPoint = points.get(connectedToId) as Point;
+  for(let [connectedId, connectedToId] of Object.entries(connections)) {
+    let connectedPoint = points[connectedId] as Point;
+    let connectedToPoint = points[connectedToId as string] as Point;
 
     connectedPoint.originPos = connectedToPoint.localPos;
   }
@@ -122,7 +123,7 @@ function dudeController(
 
   if(state.has("fire") && gunPoint) {
     let ballId = spawnBall(world, point.pos(), 5);
-    let ballBody = world.bodies.get(ballId) as Body;
+    let ballBody = world.bodies[ballId] as Body;
 
     ballBody.velocity = gunPoint.direction.multiply(14);
 
@@ -166,7 +167,7 @@ export function tick(world: World) {
 
   for(let dude of dudeEntities) {
     let gunId = dude.attributes.currentGunId;
-    let gunPoint = world.points.get(gunId);
+    let gunPoint = world.points[gunId];
 
     for(let action of world.actionsLog.filter(v => v.id == dude.id)) {
       applyAction(action, dude.attributes, gunPoint);

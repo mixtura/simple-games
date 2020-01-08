@@ -1,10 +1,10 @@
 import v from "./vector.js";
 import { tick } from "./rainbowman.js";
-import { World, Point } from "./world.js";
-import { initWorld } from "./init.js";
+import { World, Point, worldFactory, mapEntity } from "./world.js";
 import { redraw } from "./render.js";
+import { createClient } from "./client.js";
 
-function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {  
+function bindClientEvents(world: World, client: WebSocket, ctx: CanvasRenderingContext2D) {  
   setInterval(() => tick(world), world.tickDuration);
   setInterval(() => redraw(world, ctx), world.tickDuration);
 
@@ -70,7 +70,7 @@ function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {
 
   addEventListener("mousemove", ev => {
     let last = world.actionsLog[world.actionsLog.length - 1];
-    let cameraPoint = world.points.get("maincamera") as Point 
+    let cameraPoint = world.points["maincamera"] as Point 
     let pointerWorldPos = new v(
       ev.clientX + cameraPoint.pos().x, 
       ev.clientY + cameraPoint.pos().y);
@@ -91,7 +91,30 @@ function bindClientEvents(world: World, ctx: CanvasRenderingContext2D) {
 
 export function rainbowman(canvas: HTMLCanvasElement) {
   let ctx = canvas.getContext("2d");
-  let world = initWorld(canvas.width, canvas.height);
+  let world = worldFactory(1);
+  
+  mapEntity(world, {
+    id: "maincamera",
+    point: new Point(),
+    attributes: {
+      scale: 1,
+      targetId: "dude1",
+      smoothness: 0.05,
+      width: canvas.width,
+      height: canvas.height,
+      shift: new v(-canvas.width/2, -canvas.height/2)
+    }
+  });
 
-  bindClientEvents(world, ctx as CanvasRenderingContext2D);
+  let client = createClient((data) => {
+    let receivedWorld = JSON.parse(data) as World;
+
+    Object.assign(world.points, receivedWorld.points);
+    Object.assign(world.bodies, receivedWorld.bodies);
+    Object.assign(world.connections, receivedWorld.connections);
+    Object.assign(world.attributes, receivedWorld.attributes);
+    Object.assign(world.colliders, receivedWorld.colliders);
+  })
+
+  bindClientEvents(world, client, ctx as CanvasRenderingContext2D);
 }

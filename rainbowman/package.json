@@ -2,14 +2,19 @@
   "name": "rainbowman",
   "version": "1.0.0",
   "description": "build: tsc\r local run: npx serve",
-  "main": "output/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "tsc",
+    "start": "node -r esm output/server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/serve-handler": "^6.1.0",
     "@types/websocket": "^1.0.0",
+    "esm": "^3.2.25",
+    "http": "0.0.0",
+    "serve-handler": "^6.1.2",
     "ts-toolbelt": "^6.1.5",
     "websocket": "^1.0.31"
   },

@@ -2,6 +2,14 @@ import Vector from "./vector.js"
 import {Exact} from "./utilities.js"
 import {Action} from "./actions.js"
 
+export type Id = string 
+export type IdToComponentMap<T> = { [K in Id]: T | undefined }
+
+export interface Serializable {
+  freeze() : Object;
+  thaw() : Object;
+}
+
 export class Point {
   constructor( 
     localPos = Vector.zero, 
@@ -74,7 +82,7 @@ export class CircleCollider {
   bypassPlatforms: Set<string>
 }
 
-export interface CameraAttributes {
+export type CameraAttributes = {
   scale: number,
   targetId: string,
   smoothness: number,
@@ -83,7 +91,7 @@ export interface CameraAttributes {
   shift: Vector
 }
 
-export interface DudeAttributes {
+export type DudeAttributes = {
   radius: number, 
   jumpForce: number, 
   runVelocity: number, 
@@ -96,46 +104,38 @@ export interface DudeAttributes {
   currentGunId: string;
 }
 
-export interface GunAttributes {
-  length: number;
-}
-
-export interface BallAttributes {
-  radius: number
-}
+export type GunAttributes = { length: number; }
+export type BallAttributes = { radius: number }
 
 export type SimpleEntity = {
   id: string
   point: Point  
 }
 
-export type HasBody = {
-  body: Body
-}
+export type HasBody = { body: Body }
+export type HasColliders = { colliders: CircleCollider[] }
+export type HasAttributes<AttrsT> = { attributes: AttrsT }
 
-export type HasAttributes<AttrsT> = {
-  attributes: AttrsT
-}
+export type DudeEntityShape = 
+  SimpleEntity & HasBody & HasColliders & HasAttributes<DudeAttributes>
+export type GunEntityShape = 
+  SimpleEntity & HasAttributes<GunAttributes>
+export type BallEntityShape = 
+  SimpleEntity & HasColliders & HasBody & HasAttributes<BallAttributes>
+export type CameraEntityShape = 
+  SimpleEntity & HasAttributes<CameraAttributes>
+export type EntityShape = 
+  DudeEntityShape | GunEntityShape | BallEntityShape | CameraEntityShape
 
-export type HasColliders = {
-  colliders: CircleCollider[]
-}
-
-export type DudeEntityShape = SimpleEntity & HasBody & HasColliders & HasAttributes<DudeAttributes>
-export type GunEntityShape = SimpleEntity & HasAttributes<GunAttributes>
-export type BallEntityShape = SimpleEntity & HasColliders & HasBody & HasAttributes<BallAttributes>
-export type CameraEntityShape = SimpleEntity & HasAttributes<CameraAttributes>
-export type EntityShape = DudeEntityShape | GunEntityShape | BallEntityShape | CameraEntityShape
-
-export interface World {
+export type World = {
   pointerPos: Vector,
   tickDuration: number,
-  connections: Map<string, string>,
-  platforms: Array<Platform>,
-  points: Map<string, Point>,
-  bodies: Map<string, Body>,
-  colliders: Map<string, CircleCollider[]>,
-  attributes: Map<string, {}>
+  connections: IdToComponentMap<string>,
+  platforms: Platform[],
+  points: IdToComponentMap<Point>,
+  bodies: IdToComponentMap<Body>,
+  colliders: IdToComponentMap<CircleCollider[]>,
+  attributes: IdToComponentMap<{}>
   actionsLog: Action[]
 }
 
@@ -143,12 +143,12 @@ export function worldFactory(tickDuration: number) : World {
   return {
     pointerPos: Vector.zero,
     tickDuration: tickDuration,
-    connections: new Map<string, string>(),
+    connections: {},
     platforms: [],
-    points: new Map<string, Point>(),
-    bodies: new Map<string, Body>(),
-    colliders: new Map<string, CircleCollider[]>(),
-    attributes: new Map<string, {}>(),
+    points: {},
+    bodies: {},
+    colliders: {},
+    attributes: {},
     actionsLog: []
   };
 }
@@ -156,29 +156,30 @@ export function worldFactory(tickDuration: number) : World {
 export function attach(
   id: string, 
   parentId: string,
-  points: Map<string, Point>, 
-  connections: Map<string, string>) {
+  points: IdToComponentMap<Point>, 
+  connections: IdToComponentMap<string>) {
   
-  let point = points.get(id);
-  let parentPoint = points.get(parentId)
+  let point = points[id];
+  let parentPoint = points[parentId]
   
   if(point && parentPoint) {
     point.originPos = parentPoint.localPos;
-    connections.set(id, parentId);
+    connections[id] = parentId;
   }
 }
 
 export function detach(
   id: string, 
-  points: Map<string, Point>, 
-  connections: Map<string, string>) { 
+  points: IdToComponentMap<Point>, 
+  connections: IdToComponentMap<string>) { 
   
-  let point = points.get(id);
+  let point = points[id];
   
   if(point) {
     point.localPos = point.originPos.add(point.localPos);
     point.originPos = Vector.zero;
-    connections.delete(id);
+    
+    connections[id] = undefined;
   }
 }
 
@@ -188,18 +189,18 @@ export function mapEntity<T extends EntityShape>(
   
   let id = entity.id;
   
-  world.points.set(id, entity.point);
+  world.points[id] = entity.point;
 
   if("colliders" in entity) {
-    world.colliders.set(id, entity.colliders);
+    world.colliders[id] = entity.colliders;
   }
 
   if("body" in entity) {    
-    world.bodies.set(id, entity.body);
+    world.bodies[id] = entity.body;
   }
 
   if("attributes" in entity) {
-    world.attributes.set(id, entity.attributes);
+    world.attributes[id] = entity.attributes;
   }
 }
 
@@ -209,10 +210,10 @@ export function selectEntity<T extends EntityShape>(
   
   return <T>{
     id: id,
-    point: world.points.get(id) as Point,
-    colliders: world.colliders.get(id),
-    body: world.bodies.get(id),
-    attributes: world.attributes.get(id)
+    point: world.points[id] as Point,
+    colliders: world.colliders[id],
+    body: world.bodies[id],
+    attributes: world.attributes[id]
   };
 }
 
@@ -220,7 +221,7 @@ export function selectEntities<T extends EntityShape>(
   idPefix: string, 
   world: World) : T[] {
   
-  return Array.from(world.points.keys())
+  return Array.from(Object.keys(world.points))
     .filter(k => k.startsWith(idPefix))
     .map(id => selectEntity<T>(id, world));
 }

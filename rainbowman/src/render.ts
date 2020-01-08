@@ -7,7 +7,8 @@ import {
   World,
   selectEntities,
   selectEntity,
-  Point
+  Point,
+  IdToComponentMap
 } from "./world.js";
 
 export function redraw(world: World, ctx: CanvasRenderingContext2D) {
@@ -39,13 +40,12 @@ export function redraw(world: World, ctx: CanvasRenderingContext2D) {
 function updateCamera(
   ctx: CanvasRenderingContext2D, 
   cameraEntity: CameraEntityShape, 
-  points: Map<string, Point>) {
+  points: IdToComponentMap<Point>) {
   
   let point = cameraEntity.point;
   let cameraAttrs = cameraEntity.attributes;
   let currentPos = point.localPos;
-  let targetPoint = points
-    .get(cameraAttrs.targetId) as Point;
+  let targetPoint = points[cameraAttrs.targetId] as Point;
   
   let targetPos = targetPoint
     .pos()

@@ -18,20 +18,7 @@ export function initWorld(width: number, height: number) {
     new Platform("platform-3", new v(0, 500), 500),
     new Platform("platform-4", new v(300, 600), 400)
   ];
-  
-  mapEntity(world, {
-    id: "maincamera",
-    point: new Point(),
-    attributes: {
-      scale: 1,
-      targetId: "dude1",
-      smoothness: 0.05,
-      width,
-      height,
-      shift: new v(-width/2, -height/2)
-    }
-  });
-  
+    
   mapEntity(world, {
     id: "dude1",
     point: new Point(v.zero, v.right),
@@ -56,9 +43,7 @@ export function initWorld(width: number, height: number) {
   mapEntity(world, {
     id: "gun1",
     point: new Point(v.zero, v.right),
-    attributes: {
-      length: 20
-    }
+    attributes: { length: 20 }
   });
   
   attach("gun1", "dude1", world.points, world.connections);
