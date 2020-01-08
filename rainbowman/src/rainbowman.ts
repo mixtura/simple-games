@@ -5,12 +5,8 @@ import {
   Body, 
   CircleCollider, 
   Platform,
-  GunEntityShape,
-  DudeEntityShape,
-  CameraEntityShape,
-  BallEntityShape, 
+  DudeEntityShape, 
   mapEntity, 
-  selectEntity,
   selectEntities,
   DudeAttributes
 } from "./world.js";
@@ -211,7 +207,10 @@ function applyAction(
   }
 }
 
-function applyEndAction(attributes: DudeAttributes, action: ActionEnd & ActionType) {
+function applyEndAction(
+  attributes: DudeAttributes, 
+  action: ActionEnd & ActionType) {
+  
   switch(action.name) {
     case "left": 
     case "right":
@@ -227,7 +226,10 @@ function applyEndAction(attributes: DudeAttributes, action: ActionEnd & ActionTy
   }
 }
 
-function applyStartAction(attributes: DudeAttributes, action: ActionStart & ActionType) {
+function applyStartAction(
+  attributes: DudeAttributes, 
+  action: ActionStart & ActionType) {
+  
   switch(action.name) {
     case "left":
       attributes.state.add("left");
