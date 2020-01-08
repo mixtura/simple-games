@@ -1,14 +1,9 @@
 import Vector from "./vector.js"
-import {Exact} from "./utilities.js"
-import {Action} from "./actions.js"
+import { Exact } from "./utilities.js"
+import { Action } from "./actions.js"
 
 export type Id = string 
 export type IdToComponentMap<T> = { [K in Id]: T | undefined }
-
-export interface Serializable {
-  freeze() : Object;
-  thaw() : Object;
-}
 
 export class Point {
   constructor( 

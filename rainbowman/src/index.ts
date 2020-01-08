@@ -3,6 +3,7 @@ import { tick } from "./rainbowman.js";
 import { World, Point, worldFactory, mapEntity } from "./world.js";
 import { redraw } from "./render.js";
 import { createClient } from "./client.js";
+import { deserialize } from "./serializer.js";
 
 function bindClientEvents(world: World, client: WebSocket, ctx: CanvasRenderingContext2D) {  
   setInterval(() => tick(world), world.tickDuration);
@@ -107,7 +108,7 @@ export function rainbowman(canvas: HTMLCanvasElement) {
   });
 
   let client = createClient((data) => {
-    let receivedWorld = JSON.parse(data) as World;
+    let receivedWorld = deserialize(data);
 
     Object.assign(world.points, receivedWorld.points);
     Object.assign(world.bodies, receivedWorld.bodies);

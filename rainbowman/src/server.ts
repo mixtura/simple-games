@@ -2,6 +2,7 @@ import http from "http"
 import handler from "serve-handler"
 import { server as WebSocketServer } from "websocket"
 import { initWorld } from "./init";
+import { serialize } from "./serializer";
 
 function createServer(onRequest: (data: string) => void) {
   let server = http.createServer(async function(request, response) {
@@ -60,6 +61,6 @@ let server = createServer((data) => {
 
 setInterval(() => {
   for(let connection of server.connections) {
-    connection.send(JSON.stringify(world));
+    connection.send(serialize(world));
   }
 }, 5000)
