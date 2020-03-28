@@ -40,68 +40,49 @@ Vector.left = new Vector(-1, 0);
 Vector.right = new Vector(1, 0);
 Vector.down = new Vector(0, -1);
 
-function drawEye(ctx, x, y, radius, pupilRatio, lookDirX, lookDirY) {
-  ctx.fillStyle = "#FFFFFF";
-  
+function drawFishEye(ctx, x, y, radius, pupilRatio, lookDirX, lookDirY) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, 2 * Math.PI);
+
+  ctx.fillStyle = "#FFFFFF";
   ctx.fill();
   
-  ctx.fillStyle = "#001242";
-
-  var pupilRadius = radius * pupilRatio;
-  var maxPupilOffset = radius - pupilRadius;
-
-  var xPupilOffset = maxPupilOffset * lookDirX;
-  var yPupilOffset = maxPupilOffset * lookDirY;
-
+  let pupilRadius = radius * pupilRatio;
+  let maxPupilOffset = radius - pupilRadius;
+  
+  let xPupilOffset = maxPupilOffset * lookDirX;
+  let yPupilOffset = maxPupilOffset * lookDirY;
+  
   ctx.beginPath();
   ctx.arc(x + xPupilOffset, y + yPupilOffset, pupilRadius, 0, 2 * Math.PI);
+
+  ctx.fillStyle = "#001242";
   ctx.fill();
 }
 
-function drawTail(ctx, x, y, firstWidth, secondWidth, length) {
-  ctx.strokeStyle = '#FFFFFF81';
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-  ctx.moveTo(x, y - firstWidth / 2); // 0
-  ctx.lineTo(x, y + firstWidth / 2); // 1
-  ctx.quadraticCurveTo(x, y + secondWidth / 3, x - length, y + secondWidth / 2); // 2
-  ctx.quadraticCurveTo(x - length * 0.6, y, x - length, y - secondWidth / 2);
-  ctx.quadraticCurveTo(x, y - secondWidth / 3, x, y - firstWidth / 2);
-  ctx.fill();
-  // ctx.stroke();
+function drawFishTail(ctx, x, y, baseWidth, endWidth, length) {
+  ctx.moveTo(x, y - baseWidth / 2);
+  ctx.quadraticCurveTo(x, y - endWidth / 3, x - length, y - endWidth / 2);
+  ctx.quadraticCurveTo(x - length * 0.6, y, x - length, y + endWidth / 2);
+  ctx.quadraticCurveTo(x, y + endWidth / 3, x, y + baseWidth / 2);
 }
 
-function drawBody(ctx, x, y, length) {
-  ctx.strokeStyle = '#FFFFFF81';
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-  ctx.moveTo(x, y);
+function drawFishBody(ctx, x, y, length, baseTailWidth) {
+  ctx.moveTo(x, y + baseTailWidth / 2);
   ctx.quadraticCurveTo(x + length / 2, y + length / 2, x + length, y);
-  ctx.quadraticCurveTo(x + length / 2, y - length / 2, x, y);
-  ctx.fill();
-  // ctx.stroke();
+  ctx.quadraticCurveTo(x + length / 2, y - length / 2, x, y - baseTailWidth / 2);
 }
 
-function drawFloater(ctx, x, y, size, phase) {
-  var yShift = Math.sin(new Date() / 1000 + phase) * 0.1 * size;
+function drawFishFloater(ctx, x, y, size, phase) {
+  let yShift = Math.sin(new Date() / 1000 + phase) * 0.1 * size;
 
-  ctx.strokeStyle = '#FFFFFF81';
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.quadraticCurveTo(x, y - size * 0.4, x - size, y + size * 0.5 + yShift);
   ctx.quadraticCurveTo(x, y + size * 0.6, x, y);
-  ctx.fill();
-  // ctx.stroke();
 }
 
 function drawFish(ctx, fish, flip, rotation) {
-  var {size, position, lookDir, pupilRatio, kind, color, floaterPhase} = fish;
+  let {size, position, lookDir, pupilRatio, kind, color, floaterPhase} = fish;
   
   ctx.translate(position.x, position.y);
   ctx.rotate(rotation);
@@ -110,26 +91,18 @@ function drawFish(ctx, fish, flip, rotation) {
     ctx.transform(-1, 0, 0, 1, 0, 0);
   }
 
+  ctx.beginPath();
+  
+  drawFishBody(ctx, -size * 0.5, 0, size, size * 0.1);
+  drawFishTail(ctx, -size * 0.35, 0, size * 0.1, size * kind.tailWidthRatio, size * kind.tailLengthRatio);
+  drawFishFloater(ctx, size * 0.05, size * 0.1, size * 0.33, floaterPhase);
+
   ctx.fillStyle = color;
+  ctx.fill();
 
-  drawBody(ctx, -size * 0.5, 0, size);
-  drawTail(ctx, -size * 0.35, 0, size * 0.05, size * kind.tailWidthRatio, size * kind.tailLengthRatio);
-  drawFloater(ctx, size * 0.05, size * 0.1, size * 0.33, floaterPhase);
-
-  ctx.fillStyle = color;
-
-  drawEye(ctx, size * 0.2, 0, size * 0.09, pupilRatio, lookDir.x, lookDir.y);
+  drawFishEye(ctx, size * 0.2, 0, size * 0.09, pupilRatio, lookDir.x, lookDir.y);
 
   ctx.resetTransform();
-}
-
-function drawBubble(ctx, buble) {
-  ctx.strokeStyle = '#FFFFFFB1';
-  ctx.lineWidth = 1.2;
-  
-  ctx.beginPath();
-  ctx.arc(buble.position.x, buble.position.y, buble.radius, 0, 2 * Math.PI);
-  ctx.stroke();
 }
 
 function drawWeed(ctx, weed) {
@@ -139,14 +112,14 @@ function drawWeed(ctx, weed) {
   ctx.beginPath();
   ctx.moveTo(weed.position.x, weed.position.y);
 
-  var segmentsCount = weed.length / weed.segmentLength;
-  var currentSegmentBendDir = 1;
+  let segmentsCount = weed.length / weed.segmentLength;
+  let currentSegmentBendDir = 1;
 
-  for(var segment = 0; segment < segmentsCount; segment++) {
-    var posX = weed.position.x;
-    var posY = weed.position.y + segment * weed.segmentLength;
-    var bendX = posX + weed.bendDistance * currentSegmentBendDir * 2;
-    var bendY = posY + weed.segmentLength * 1.1;
+  for(let segment = 0; segment < segmentsCount; segment++) {
+    let posX = weed.position.x;
+    let posY = weed.position.y + segment * weed.segmentLength;
+    let bendX = posX + weed.bendDistance * currentSegmentBendDir * 2;
+    let bendY = posY + weed.segmentLength * 1.1;
 
     ctx.quadraticCurveTo(bendX, bendY, posX, posY);
 
@@ -154,6 +127,58 @@ function drawWeed(ctx, weed) {
   }
 
   ctx.stroke();
+}
+
+function drawFishes(ctx, fishes) {
+  for(let fish of fishes) {
+    fish.position = fish.position.moveAlong(fish.moveDir, fish.speed);
+
+    let flip = fish.moveDir.x < 0;
+    
+    drawFish(ctx, fish, flip, 0);
+  }
+}
+
+function drawBubbles(ctx, bubbles) {
+  const bubbleMoveSpeedFactor = 0.1;
+  const bubbleSideMoveAmplitude = 0.2;
+  const bubbleSideMoveSpeedFactor = 0.1;
+
+  ctx.strokeStyle = '#FFFFFFB1';
+  ctx.lineWidth = 1.2;
+
+  ctx.beginPath();
+
+  for(let bubble of bubbles) {
+    bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor;
+    bubble.position.x = 
+      bubble.position.x + 
+      Math.sin(bubble.position.y * bubbleSideMoveSpeedFactor) * 
+      bubbleSideMoveAmplitude;
+
+    ctx.moveTo(bubble.position.x + bubble.radius, bubble.position.y);
+    ctx.arc(bubble.position.x, bubble.position.y, bubble.radius, 0, 2 * Math.PI);
+  }
+
+  ctx.stroke();
+}
+
+function drawWeeds(ctx, weeds, width, height) {
+  let currentLayer = 0;
+
+  for(let weed of weeds) {
+    if(currentLayer != weed.layer) {
+      let phase = Math.sin(new Date() / 1000 + currentLayer) / 50;
+      
+      ctx.resetTransform();
+      ctx.rotate(Math.PI);
+      ctx.transform(1, 0, phase, 1, -width, -height * 2 - 50);
+  
+      currentLayer = weed.layer;
+    }
+
+    drawWeed(ctx, weed);
+  }
 }
 
 const fishKinds = [{
@@ -176,19 +201,11 @@ function aquarium(canvasEl) {
   const fishes = [];
   const weeds = [];  
   let bubbles = [];
-  
-  const backgroundColor = getRandColor(
-    maxR = 10,
-    minR = 10,
-    minB = 50, 
-    maxB = 70,
-    minG = 10, 
-    maxG = 35);
-    
+
   canvasEl.width = width;
   canvasEl.height = height;
 
-  addSomeFishes(10);
+  addSomeFishes(5);
   addSomeWeed(20);
 
   function addSomeFishes(count) {
@@ -247,10 +264,14 @@ function aquarium(canvasEl) {
     minB = 0, maxB = 255, 
     minG = 0, maxG = 255) {
       
-    var r = getRandInRange(minR, maxR);
-    var g = getRandInRange(minG, maxG);
-    var b = getRandInRange(minB, maxB);
+    let r = getRandInRange(minR, maxR);
+    let g = getRandInRange(minG, maxG);
+    let b = getRandInRange(minB, maxB);
 
+    return getColor(r, g, b);
+  }
+
+  function getColor(r, g, b) {
     return `rgb(${r},${g},${b})`;
   }
 
@@ -267,14 +288,14 @@ function aquarium(canvasEl) {
   }
 
   setInterval(function() {
-    for(var fish of fishes) {
-      var shouldChangeMoveDir = Math.random() > 0.95 || !checkInBounds(fish.position);
-      var shouldChangeLookDir = Math.random() > 0.4;
-      var shouldMakeBubble = Math.random() > 0.9;
+    for(let fish of fishes) {
+      let shouldChangeMoveDir = Math.random() > 0.95 || !checkInBounds(fish.position);
+      let shouldChangeLookDir = Math.random() > 0.4;
+      let shouldMakeBubble = Math.random() > 0.9;
 
       if(shouldChangeMoveDir) {
-        var x = Math.random();
-        var y = Math.random();
+        let x = Math.random();
+        let y = Math.random();
 
         if(fish.moveDir.x > 0) {
           x = x * (-1);
@@ -314,59 +335,17 @@ function aquarium(canvasEl) {
   }, 300);
 
   setInterval(function() {
+    let g = Math.sin(new Date() / 3000 + 10) * 30;
+    let b = Math.sin(new Date() / 2000) * 30 + 20;
+    let backgroundColor = getColor(0, g, b);
+
     ctx.resetTransform();
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
-    drawFishes();
-    drawBubbles();
-    drawWeeds();
-
-    function drawFishes() {
-      for(var fish of fishes) {
-        fish.position = fish.position
-          .moveAlong(fish.moveDir, fish.speed);
-  
-        var flip = fish.moveDir.x < 0;
-        
-        drawFish(ctx, fish, flip, 0);
-      }
-    }
-    
-    function drawBubbles() {
-      const bubbleMoveSpeedFactor = 0.1;
-      const bubbleSideMoveAmplitude = 0.2;
-      const bubbleSideMoveSpeedFactor = 0.1;
-
-      for(var bubble of bubbles) {
-        bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor;
-        bubble.position.x = 
-          bubble.position.x + 
-          Math.sin(bubble.position.y * bubbleSideMoveSpeedFactor) * 
-          bubbleSideMoveAmplitude;
-
-        drawBubble(ctx, bubble);
-      }
-    }
-
-    function drawWeeds() {
-      var currentLayer = 0;
-    
-      for(var weed of weeds) {
-        if(currentLayer != weed.layer) {
-          var phase = Math.sin(new Date() / 1000 + currentLayer) / 50;
-          
-          ctx.resetTransform();
-          ctx.rotate(Math.PI);
-          ctx.transform(1, 0, phase, 1, -width, -height * 2 - 50);
-      
-          currentLayer = weed.layer;
-        }
-
-        drawWeed(ctx, weed);
-      }
-    }
-
+    drawFishes(ctx, fishes);
+    drawBubbles(ctx, bubbles);
+    drawWeeds(ctx, weeds, width, height);
   }, 0);
 }
 
