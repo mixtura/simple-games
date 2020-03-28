@@ -44,7 +44,7 @@ function drawFishEye(ctx, x, y, radius, pupilRatio, lookDirX, lookDirY) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, 2 * Math.PI);
 
-  ctx.fillStyle = "#FFFFFF";
+  ctx.fillStyle = "#FFFFFFA1";
   ctx.fill();
   
   let pupilRadius = radius * pupilRatio;
@@ -61,9 +61,11 @@ function drawFishEye(ctx, x, y, radius, pupilRatio, lookDirX, lookDirY) {
 }
 
 function drawFishTail(ctx, x, y, baseWidth, endWidth, length) {
+  let yShift = Math.sin(new Date() / 1000) * length * 0.1;
+
   ctx.moveTo(x, y - baseWidth / 2);
-  ctx.quadraticCurveTo(x, y - endWidth / 3, x - length, y - endWidth / 2);
-  ctx.quadraticCurveTo(x - length * 0.6, y, x - length, y + endWidth / 2);
+  ctx.quadraticCurveTo(x, y - endWidth / 3, x - length, y - endWidth / 2 + yShift);
+  ctx.quadraticCurveTo(x - 0.5 * length, y - length * 0.1, x - length, y + endWidth / 2 + yShift);
   ctx.quadraticCurveTo(x, y + endWidth / 3, x, y + baseWidth / 2);
 }
 
@@ -81,6 +83,13 @@ function drawFishFloater(ctx, x, y, size, phase) {
   ctx.quadraticCurveTo(x, y + size * 0.6, x, y);
 }
 
+function drawFishTopFloater(ctx, x, y, size) {
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - size * 0.35, y - size * 0.12);
+  ctx.lineTo(x - size * 0.75, y + size * 0.2);
+  ctx.fill();
+}
+
 function drawFish(ctx, fish, flip, rotation) {
   let {size, position, lookDir, pupilRatio, kind, color, floaterPhase} = fish;
   
@@ -96,11 +105,12 @@ function drawFish(ctx, fish, flip, rotation) {
   drawFishBody(ctx, -size * 0.5, 0, size, size * 0.1);
   drawFishTail(ctx, -size * 0.35, 0, size * 0.1, size * kind.tailWidthRatio, size * kind.tailLengthRatio);
   drawFishFloater(ctx, size * 0.05, size * 0.1, size * 0.33, floaterPhase);
-
+  
   ctx.fillStyle = color;
   ctx.fill();
 
-  drawFishEye(ctx, size * 0.2, 0, size * 0.09, pupilRatio, lookDir.x, lookDir.y);
+  drawFishTopFloater(ctx, size * 0.2, -size * 0.2, size);
+  drawFishEye(ctx, size * 0.2, -size * 0.05, size * 0.09, pupilRatio, lookDir.x, lookDir.y);
 
   ctx.resetTransform();
 }
@@ -144,9 +154,6 @@ function drawBubbles(ctx, bubbles) {
   const bubbleSideMoveAmplitude = 0.2;
   const bubbleSideMoveSpeedFactor = 0.1;
 
-  ctx.strokeStyle = '#FFFFFFB1';
-  ctx.lineWidth = 1.2;
-
   ctx.beginPath();
 
   for(let bubble of bubbles) {
@@ -158,8 +165,13 @@ function drawBubbles(ctx, bubbles) {
 
     ctx.moveTo(bubble.position.x + bubble.radius, bubble.position.y);
     ctx.arc(bubble.position.x, bubble.position.y, bubble.radius, 0, 2 * Math.PI);
-  }
 
+    // ctx.font = `${bubble.radius * 2}px Arial`;
+    // ctx.fillText('A', bubble.position.x, bubble.position.y);
+  }
+  
+  ctx.strokeStyle = '#FFFFFFB1';
+  ctx.lineWidth = 1.2;
   ctx.stroke();
 }
 
@@ -182,16 +194,16 @@ function drawWeeds(ctx, weeds, width, height) {
 }
 
 const fishKinds = [{
-  tailWidthRatio: 0.4,
-  tailLengthRatio: 0.25
-},
-{
-  tailWidthRatio: 0.5,
-  tailLengthRatio: 0.3
+  tailWidthRatio: 0.35,
+  tailLengthRatio: 0.35
 },
 {
   tailWidthRatio: 0.4,
   tailLengthRatio: 0.4
+},
+{
+  tailWidthRatio: 0.35,
+  tailLengthRatio: 0.45
 }];
 
 function aquarium(canvasEl) {
@@ -291,7 +303,7 @@ function aquarium(canvasEl) {
     for(let fish of fishes) {
       let shouldChangeMoveDir = Math.random() > 0.95 || !checkInBounds(fish.position);
       let shouldChangeLookDir = Math.random() > 0.4;
-      let shouldMakeBubble = Math.random() > 0.9;
+      let shouldMakeBubble = Math.random() > 0.7;
 
       if(shouldChangeMoveDir) {
         let x = Math.random();
