@@ -1,0 +1,10 @@
+{
+  "manifest_version": 2,
+  "name": "Aquarium",
+  "version": "1",
+  "description": "Aquarium",  
+  "permissions": ["management"],
+  "chrome_url_overrides" : {
+    "newtab": "./index.html"
+  }
+}
