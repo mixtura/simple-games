@@ -65,7 +65,7 @@ function drawFishTail(ctx, x, y, baseWidth, endWidth, length) {
 
   ctx.moveTo(x, y - baseWidth / 2);
   ctx.quadraticCurveTo(x, y - endWidth / 3, x - length, y - endWidth / 2 + yShift);
-  ctx.quadraticCurveTo(x - 0.5 * length, y - length * 0.1, x - length, y + endWidth / 2 + yShift);
+  ctx.quadraticCurveTo(x - 0.5 * length, y, x - length, y + endWidth / 2 + yShift);
   ctx.quadraticCurveTo(x, y + endWidth / 3, x, y + baseWidth / 2);
 }
 
