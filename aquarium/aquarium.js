@@ -187,7 +187,7 @@ function drawBubbles(ctx, bubbles, delta) {
     ctx.arc(bubble.position.x, bubble.position.y, bubble.radius, 0, 2 * Math.PI);
   }
   
-  ctx.strokeStyle = '#FFFFFF55';
+  ctx.strokeStyle = '#FFFFFF44';
   ctx.lineWidth = 4;
   ctx.stroke();
 }
@@ -208,6 +208,36 @@ function drawWeeds(ctx, weeds, width, height) {
 
     drawWeed(ctx, weed);
   }
+}
+
+function drawAnchor(ctx, x, y, length) {
+  ctx.rotate(Math.PI / 20);
+  ctx.translate(x, y);
+
+  var width = 35;
+  var plankLength = 180;
+  var plankWidth = 25;
+  var arc = Math.PI / 10;
+  var arcBend1 = 0.4;
+  var arcBend2 = 0.5;
+  
+  ctx.fillStyle = "#00000044";
+  ctx.fillRect(-plankLength / 2, 50, plankLength / 2, plankWidth);
+  ctx.fillRect(width, 50, plankLength / 2, plankWidth); 
+  
+  ctx.beginPath();
+  ctx.rect(0, 0, width, length); 
+  ctx.moveTo(width / 2, -45);
+  ctx.arc(width / 2, -45, 50, 0, Math.PI * 2, false);
+  ctx.arc(width / 2, -45, 30, 0, Math.PI * 2, true);
+  ctx.fill();
+  
+  ctx.beginPath();
+  ctx.arc(width / 2, length * arcBend1 + 50, length - length * arcBend1 - 50, Math.PI - arc, arc, true);
+  ctx.arc(width / 2, length * arcBend2 + 50, length - length * arcBend2, arc, Math.PI - arc);
+  ctx.fill();
+
+  ctx.resetTransform();
 }
 
 const fishKinds = [{
@@ -295,11 +325,11 @@ function aquarium(canvasEl) {
     while(--count >= 0) {
       weeds.push({
         length: getRandInRange(minWeedLength, maxWeedLength),
-        width: getRandInRange(2, 5),
+        width: getRandInRange(3, 6),
         layer: Math.round(getRandInRange(0, 3)),
         bendDistance: getRandInRange(5, 20),
         segmentLength: getRandInRange(30, 40),
-        color: getRandColor(0, 10, 50, 60, 80, 180),
+        color: getRandColor(0, 10, 20, 60, 50, 80),
         position: new Vector(
           getRandInRange(0, width), 
           getRandInRange(height, height + 20))
@@ -397,6 +427,7 @@ function aquarium(canvasEl) {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
+    drawAnchor(ctx, width / 3, height - 450, 380);
     drawFishes(ctx, fishes, delta);
     drawBubbles(ctx, bubbles, delta);
     drawWeeds(ctx, weeds, width, height);
