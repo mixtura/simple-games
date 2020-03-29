@@ -150,7 +150,12 @@ function drawWeed(ctx, weed) {
     let posX = weed.position.x;
     let posY = weed.position.y + segment * weed.segmentLength;
     let bendX = posX + weed.bendDistance * currentSegmentBendDir * 2;
-    let bendY = posY + weed.segmentLength * 1.1;
+    let bendY = posY + weed.segmentLength * 1.2;
+
+    posX = addShake(posX);
+    posY = addShake(posY);
+    bendX = addShake(bendX);
+    bendY = addShake(bendY);
 
     ctx.quadraticCurveTo(bendX, bendY, posX, posY);
 
@@ -158,6 +163,10 @@ function drawWeed(ctx, weed) {
   }
 
   ctx.stroke();
+
+  function addShake(val) {
+    return val + Math.sin(Math.random() / 4) * 10;
+  }
 }
 
 function drawFishes(ctx, fishes, delta) {
@@ -176,15 +185,18 @@ function drawBubbles(ctx, bubbles, delta) {
   const bubbleSideMoveSpeedFactor = 0.1;
 
   ctx.beginPath();
-
+  
   for(let bubble of bubbles) {
     var shiftX = Math.sin(bubble.position.y * bubbleSideMoveSpeedFactor) * bubbleSideMoveAmplitude;
-
+    
     bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor * delta;
     bubble.position.x = bubble.position.x + shiftX;
 
-    ctx.moveTo(bubble.position.x + bubble.radius, bubble.position.y);
-    ctx.arc(bubble.position.x, bubble.position.y, bubble.radius, 0, 2 * Math.PI);
+    ctx.transform(1 + Math.random() * 0.5, 0, 0, 1 + Math.random() * 0.5, bubble.position.x, bubble.position.y);
+
+    ctx.moveTo(bubble.radius, 0);
+    ctx.arc(0, 0, bubble.radius, 0, 2 * Math.PI);
+    ctx.resetTransform();
   }
   
   ctx.strokeStyle = '#FFFFFF44';
@@ -340,9 +352,9 @@ function aquarium(canvasEl) {
     while(--count >= 0) {
       weeds.push({
         length: getRandInRange(minWeedLength, maxWeedLength),
-        width: getRandInRange(3, 6),
+        width: getRandInRange(4, 7),
         layer: Math.round(getRandInRange(0, 3)),
-        bendDistance: getRandInRange(5, 20),
+        bendDistance: getRandInRange(8, 20),
         segmentLength: getRandInRange(30, 40),
         color: getRandColor(0, 10, 20, 60, 50, 80),
         position: new Vector(
