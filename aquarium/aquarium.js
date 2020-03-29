@@ -214,16 +214,14 @@ function drawAnchor(ctx, x, y, length) {
   ctx.rotate(Math.PI / 20);
   ctx.translate(x, y);
 
-  var width = 35;
-  var plankLength = 180;
-  var plankWidth = 25;
-  var arc = Math.PI / 10;
-  var arcBend1 = 0.4;
-  var arcBend2 = 0.5;
+  let width = 33;
+  let plankLength = 180;
+  let plankWidth = 25;
+  let plankOffset = 80;
   
   ctx.fillStyle = "#00000044";
-  ctx.fillRect(-plankLength / 2, 50, plankLength / 2, plankWidth);
-  ctx.fillRect(width, 50, plankLength / 2, plankWidth); 
+  ctx.fillRect(-plankLength / 2, plankOffset, plankLength / 2, plankWidth);
+  ctx.fillRect(width, plankOffset, plankLength / 2, plankWidth); 
   
   ctx.beginPath();
   ctx.rect(0, 0, width, length); 
@@ -232,12 +230,29 @@ function drawAnchor(ctx, x, y, length) {
   ctx.arc(width / 2, -45, 30, 0, Math.PI * 2, true);
   ctx.fill();
   
-  ctx.beginPath();
-  ctx.arc(width / 2, length * arcBend1 + 50, length - length * arcBend1 - 50, Math.PI - arc, arc, true);
-  ctx.arc(width / 2, length * arcBend2 + 50, length - length * arcBend2, arc, Math.PI - arc);
-  ctx.fill();
+  ctx.translate(width / 2, length);
 
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  
+  drawShoulder(-1);
+
+  ctx.moveTo(0, 0);
+  
+  drawShoulder(1);
+
+  ctx.fill();
   ctx.resetTransform();
+
+  function drawShoulder(dir) {
+    const shoulderWidth = 180;
+    const shoulderHeight = 120;
+
+    ctx.quadraticCurveTo(shoulderWidth * 1.2 * dir, 0, shoulderWidth * dir, -shoulderHeight);
+    ctx.lineTo(shoulderWidth * dir * 0.9, -shoulderHeight);
+    ctx.lineTo(shoulderWidth * dir, -shoulderHeight - 50);
+    ctx.quadraticCurveTo(shoulderWidth * 1.5 * dir, 0, 0, 80);
+  }
 }
 
 const fishKinds = [{
@@ -427,7 +442,7 @@ function aquarium(canvasEl) {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
-    drawAnchor(ctx, width / 3, height - 450, 380);
+    drawAnchor(ctx, width / 2, height - 500, 380);
     drawFishes(ctx, fishes, delta);
     drawBubbles(ctx, bubbles, delta);
     drawWeeds(ctx, weeds, width, height);
