@@ -106,10 +106,11 @@ function drawFish(ctx, fish, flip, rotation) {
   ctx.fillStyle = color;
   ctx.lineWidth = 10;
   ctx.lineJoin = "round";
-  ctx.strokeStyle = "#FFFFFF25";
+  ctx.strokeStyle = "#FFFFFF29";
   
   ctx.beginPath();
   
+  drawFishTail(ctx, -bodyLength * 0.45, 0, size * kind.tailWidth, size * kind.tailLength);
   drawFishTopFloater(ctx, bodyLength * 0.2, -size * 0.15, bodyLength, kind.topFloaterHeight * size);
   
   ctx.fill();
@@ -124,7 +125,6 @@ function drawFish(ctx, fish, flip, rotation) {
   
   ctx.beginPath();
   
-  drawFishTail(ctx, -bodyLength * 0.4, 0, size * kind.tailWidth, size * kind.tailLength);
   drawFishFloater(ctx, bodyLength * 0.05, size * 0.1, size * kind.mainFloaterLength, floaterPhase);
   
   ctx.fill();
@@ -312,7 +312,7 @@ function aquarium(canvasEl) {
   canvasEl.width = width;
   canvasEl.height = height;
 
-  addSomeFishes(5);
+  addSomeFishes(10);
   addSomeWeed(20);
 
   function addSomeFishes(count) {
@@ -322,7 +322,7 @@ function aquarium(canvasEl) {
         moveDir: getRandDir(),
         lookDir: getRandDir(),
         size: getRandInRange(30, 200),
-        speed: getRandInRange(0.05, 0.3),
+        speed: getRandInRange(0.06, 0.2),
         pupilRatio: getRandInRange(0.6, 0.8),
         kind: fishKinds[Math.floor(Math.random() * fishKinds.length)],
         color: getRandColor(150,255,0,150,0,150),
@@ -396,19 +396,19 @@ function aquarium(canvasEl) {
 
   setInterval(function() {
     for(let fish of fishes) {
-      let shouldChangeMoveDir = Math.random() > 0.95 || !checkInBounds(fish.position);
+      let shouldChangeMoveDir = Math.random() > 0.97 || !checkInBounds(fish.position);
       let shouldChangeLookDir = Math.random() > 0.4;
       let shouldMakeBubble = Math.random() > 0.7;
 
       if(shouldChangeMoveDir) {
         let x = Math.random();
-        let y = Math.random();
+        let y = Math.random() * 0.2;
 
-        if(fish.moveDir.x > 0) {
+        if(fish.position.x >= width || fish.lookDir.x > 0) {
           x = x * (-1);
-        } 
+        }
 
-        if(fish.moveDir.y > 0) {
+        if(fish.position.y >= height || fish.lookDir.y > 0) {
           y = y * (-1);
         }
 
