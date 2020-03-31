@@ -94,8 +94,8 @@ function drawFishTopFloater(ctx, x, y, size, height) {
 function drawFish(ctx, fish, flip, rotation) {
   let {size, position, lookDir, pupilRatio, kind, color, floaterPhase} = fish;
   
-  var skewH = Math.cos(new Date() / 1000 + floaterPhase) * 0.08;
-  var skewV = Math.sin(new Date() / 1000 + floaterPhase) * 0.08;
+  var skewH = Math.cos(new Date() / 1000 + floaterPhase) * 0.05;
+  var skewV = Math.sin(new Date() / 1000 + floaterPhase) * 0.05;
 
   ctx.translate(position.x, position.y);
   ctx.transform(1, skewV, skewH, 1, 0, 0);
@@ -108,7 +108,7 @@ function drawFish(ctx, fish, flip, rotation) {
   let bodyLength = size * kind.bodyLength;
 
   ctx.fillStyle = color;
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 8 + 4 * Math.random();
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#FFFFFF26";
   ctx.setLineDash([]);
@@ -156,7 +156,7 @@ function drawWeed(ctx, weed) {
     let posX = weed.position.x;
     let posY = weed.position.y + segment * weed.segmentLength;
     let bendX = posX + weed.bendDistance * currentSegmentBendDir * 2;
-    let bendY = posY + weed.segmentLength * 1.2;
+    let bendY = posY + weed.segmentLength * 2.5;
 
     posX = addShake(posX);
     posY = addShake(posY);
@@ -198,13 +198,13 @@ function drawBubbles(ctx, bubbles, delta) {
     bubble.position.x = bubble.position.x + shiftX;
     
     ctx.beginPath(); 
-    ctx.transform(1 + Math.random() * 0.5, 0, 0, 1 + Math.random() * 0.5, bubble.position.x, bubble.position.y);
-    ctx.rotate(Math.random());
+    ctx.transform(1 + Math.random() * 0.3, 0, 0, 1 + Math.random() * 0.3, bubble.position.x, bubble.position.y);
+    ctx.rotate(Math.random() * 1.5);
 
     ctx.moveTo(bubble.radius, 0);
     ctx.arc(0, 0, bubble.radius, 0, 2 * Math.PI);
     
-    ctx.setLineDash([bubble.radius, bubble.radius * 2]);
+    ctx.setLineDash([bubble.radius, bubble.radius * 1.8]);
     ctx.strokeStyle = '#FFFFFF44';
     ctx.lineWidth = 4;
     ctx.stroke();
@@ -330,7 +330,7 @@ function aquarium(canvasEl) {
   canvasEl.height = height;
 
   addSomeFishes(10);
-  addSomeWeed(20);
+  addSomeWeed(15);
 
   function addSomeFishes(count) {
     while(--count >= 0) {
@@ -338,11 +338,11 @@ function aquarium(canvasEl) {
         position: getRandPos(),
         moveDir: getRandDir(),
         lookDir: getRandDir(),
-        size: getRandInRange(30, 200),
+        size: getRandInRange(50, 200),
         speed: getRandInRange(0.06, 0.2),
         pupilRatio: getRandInRange(0.6, 0.8),
         kind: fishKinds[Math.floor(Math.random() * fishKinds.length)],
-        color: getRandColor(150,255,0,150,0,150),
+        color: getRandColor(130,200,0,150,0,150),
         floaterPhase: Math.round(getRandInRange(0, Math.PI * 2))
       });
     }
@@ -364,16 +364,17 @@ function aquarium(canvasEl) {
 
   function addSomeWeed(count) {
     const maxWeedLength = 500;
-    const minWeedLength = 100;
+    const minWeedLength = 50;
 
     while(--count >= 0) {
+      var layer = Math.round(getRandInRange(0, 3));
       weeds.push({
         length: getRandInRange(minWeedLength, maxWeedLength),
-        width: getRandInRange(4, 7),
-        layer: Math.round(getRandInRange(0, 3)),
-        bendDistance: getRandInRange(8, 20),
-        segmentLength: getRandInRange(30, 40),
-        color: getRandColor(0, 10, 20, 60, 50, 80),
+        width: getRandInRange(5, 8),
+        layer: layer,
+        bendDistance: getRandInRange(10, 20),
+        segmentLength: getRandInRange(20, 40),
+        color: getRandColor(10, 30, 0, 30, 10, 80),
         position: new Vector(
           getRandInRange(0, width), 
           getRandInRange(height, height + 20))
@@ -415,7 +416,7 @@ function aquarium(canvasEl) {
     for(let fish of fishes) {
       let shouldChangeMoveDir = Math.random() > 0.97 || !checkInBounds(fish.position);
       let shouldChangeLookDir = Math.random() > 0.4;
-      let shouldMakeBubble = Math.random() > 0.7;
+      let shouldMakeBubble = Math.random() > 0.9;
 
       if(shouldChangeMoveDir) {
         let x = Math.random();
@@ -450,7 +451,7 @@ function aquarium(canvasEl) {
 
         bubbles.push({
           position: new Vector(bubblePosX, bubblePosY),
-          radius: getRandInRange(2, fish.size / 10)
+          radius: getRandInRange(fish.size / 30, fish.size / 10)
         });
       }
 
