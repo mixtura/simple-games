@@ -62,8 +62,8 @@ function drawFishEye(ctx, x, y, radius, pupilRatio, lookDirX, lookDirY) {
   ctx.fill();
 }
 
-function drawFishTail(ctx, x, y, endWidth, length) {
-  let yShift = Math.sin(new Date() / 1000) * length * 0.1;
+function drawFishTail(ctx, x, y, endWidth, length, floaterPhase) {
+  let yShift = Math.cos(new Date() / 1000 + floaterPhase) * length * 0.1;
 
   ctx.moveTo(x, y);
   ctx.quadraticCurveTo(x, y + endWidth / 3, x - length, y + endWidth / 2 + yShift);
@@ -94,7 +94,11 @@ function drawFishTopFloater(ctx, x, y, size, height) {
 function drawFish(ctx, fish, flip, rotation) {
   let {size, position, lookDir, pupilRatio, kind, color, floaterPhase} = fish;
   
+  var skewH = Math.cos(new Date() / 1000 + floaterPhase) * 0.08;
+  var skewV = Math.sin(new Date() / 1000 + floaterPhase) * 0.08;
+
   ctx.translate(position.x, position.y);
+  ctx.transform(1, skewV, skewH, 1, 0, 0);
   ctx.rotate(rotation);
 
   if(flip) {
@@ -106,11 +110,12 @@ function drawFish(ctx, fish, flip, rotation) {
   ctx.fillStyle = color;
   ctx.lineWidth = 10;
   ctx.lineJoin = "round";
-  ctx.strokeStyle = "#FFFFFF29";
+  ctx.strokeStyle = "#FFFFFF26";
+  ctx.setLineDash([]);
   
   ctx.beginPath();
   
-  drawFishTail(ctx, -bodyLength * 0.45, 0, size * kind.tailWidth, size * kind.tailLength);
+  drawFishTail(ctx, -bodyLength * 0.45, 0, size * kind.tailWidth, size * kind.tailLength, floaterPhase);
   drawFishTopFloater(ctx, bodyLength * 0.2, -size * 0.15, bodyLength, kind.topFloaterHeight * size);
   
   ctx.fill();
@@ -139,10 +144,11 @@ function drawWeed(ctx, weed) {
   ctx.strokeStyle = weed.color;
   ctx.lineWidth = weed.width;
   ctx.lineCap = "round"; 
+  ctx.setLineDash([]);
 
   ctx.beginPath();
   ctx.moveTo(weed.position.x, weed.position.y);
-
+  
   let segmentsCount = weed.length / weed.segmentLength;
   let currentSegmentBendDir = 1;
 
@@ -184,24 +190,27 @@ function drawBubbles(ctx, bubbles, delta) {
   const bubbleSideMoveAmplitude = 0.2;
   const bubbleSideMoveSpeedFactor = 0.1;
 
-  ctx.beginPath();
   
   for(let bubble of bubbles) {
     var shiftX = Math.sin(bubble.position.y * bubbleSideMoveSpeedFactor) * bubbleSideMoveAmplitude;
     
     bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor * delta;
     bubble.position.x = bubble.position.x + shiftX;
-
+    
+    ctx.beginPath(); 
     ctx.transform(1 + Math.random() * 0.5, 0, 0, 1 + Math.random() * 0.5, bubble.position.x, bubble.position.y);
+    ctx.rotate(Math.random());
 
     ctx.moveTo(bubble.radius, 0);
     ctx.arc(0, 0, bubble.radius, 0, 2 * Math.PI);
+    
+    ctx.setLineDash([bubble.radius, bubble.radius * 2]);
+    ctx.strokeStyle = '#FFFFFF44';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
     ctx.resetTransform();
   }
-  
-  ctx.strokeStyle = '#FFFFFF44';
-  ctx.lineWidth = 4;
-  ctx.stroke();
 }
 
 function drawWeeds(ctx, weeds, width, height) {
@@ -223,34 +232,42 @@ function drawWeeds(ctx, weeds, width, height) {
 }
 
 function drawAnchor(ctx, x, y, length) {
-  ctx.rotate(Math.PI / 20);
-  ctx.translate(x, y);
-
-  let width = 33;
-  let plankLength = 180;
+  let width = 30;
+  let plankLength = 150;
   let plankWidth = 25;
   let plankOffset = 80;
+  let ballRadius = 20;
+  let ringOutRadius = 50;
+  let ringInnerRadius =  30;
   
   ctx.fillStyle = "#00000044";
-  ctx.fillRect(-plankLength / 2, plankOffset, plankLength / 2, plankWidth);
-  ctx.fillRect(width, plankOffset, plankLength / 2, plankWidth); 
   
+  ctx.rotate(Math.PI / 20);
+  ctx.translate(x, y);
   ctx.beginPath();
+
+  ctx.rect(-plankLength / 2, plankOffset, plankLength / 2, plankWidth);
+  ctx.rect(width, plankOffset, plankLength / 2, plankWidth); 
   ctx.rect(0, 0, width, length); 
-  ctx.moveTo(width / 2, -45);
-  ctx.arc(width / 2, -45, 50, 0, Math.PI * 2, false);
-  ctx.arc(width / 2, -45, 30, 0, Math.PI * 2, true);
+
+  ctx.moveTo(plankLength / 2, ballRadius);
+  ctx.arc(plankLength / 2 + ballRadius + width / 2, plankOffset + plankWidth / 2, ballRadius, 0, Math.PI * 2);
+  ctx.moveTo(plankLength / 2, ballRadius);
+  ctx.arc(-plankLength / 2 - ballRadius + width / 2, plankOffset + plankWidth / 2, ballRadius, 0, Math.PI * 2);
+
+  ctx.moveTo(width / 2, -ringInnerRadius);
+  ctx.arc(width / 2, -ringInnerRadius, ringOutRadius, 0, Math.PI * 2, false);
+  ctx.arc(width / 2, -ringInnerRadius, ringInnerRadius, 0, Math.PI * 2, true);
+    
   ctx.fill();
   
   ctx.translate(width / 2, length);
-
   ctx.beginPath();
+
   ctx.moveTo(0, 0);
-  
   drawShoulder(-1);
 
   ctx.moveTo(0, 0);
-  
   drawShoulder(1);
 
   ctx.fill();
@@ -258,12 +275,12 @@ function drawAnchor(ctx, x, y, length) {
 
   function drawShoulder(dir) {
     const shoulderWidth = 180;
-    const shoulderHeight = 120;
+    const shoulderHeight = 100;
 
     ctx.quadraticCurveTo(shoulderWidth * 1.2 * dir, 0, shoulderWidth * dir, -shoulderHeight);
     ctx.lineTo(shoulderWidth * dir * 0.9, -shoulderHeight);
     ctx.lineTo(shoulderWidth * dir, -shoulderHeight - 50);
-    ctx.quadraticCurveTo(shoulderWidth * 1.5 * dir, 0, 0, 80);
+    ctx.quadraticCurveTo(shoulderWidth * 1.5 * dir, 0, 0, 100);
   }
 }
 
@@ -326,7 +343,7 @@ function aquarium(canvasEl) {
         pupilRatio: getRandInRange(0.6, 0.8),
         kind: fishKinds[Math.floor(Math.random() * fishKinds.length)],
         color: getRandColor(150,255,0,150,0,150),
-        floaterPhase: Math.round(getRandInRange(0, 3))
+        floaterPhase: Math.round(getRandInRange(0, Math.PI * 2))
       });
     }
 
@@ -454,7 +471,7 @@ function aquarium(canvasEl) {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
-    drawAnchor(ctx, width / 2, height - 500, 380);
+    drawAnchor(ctx, width / 2, height - 510, 380);
     drawFishes(ctx, fishes, delta);
     drawBubbles(ctx, bubbles, delta);
     drawWeeds(ctx, weeds, width, height);
