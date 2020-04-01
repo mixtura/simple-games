@@ -184,17 +184,18 @@ function drawFishes(ctx, fishes) {
 }
 
 function drawBubbles(ctx, bubbles) {  
-  for(let bubble of bubbles) {    
-    ctx.beginPath(); 
-    ctx.transform(1 + Math.random() * 0.3, 0, 0, 1 + Math.random() * 0.3, bubble.position.x, bubble.position.y);
-    ctx.rotate(Math.random() * 1.5);
+  for(let bubble of bubbles) {
+    var scaleH = Math.sin(new Date() / 100) * 0.15;
+    var scaleV = Math.cos(new Date() / 100) * 0.15;
 
-    ctx.moveTo(bubble.radius, 0);
-    ctx.arc(0, 0, bubble.radius, 0, 2 * Math.PI);
-    
-    ctx.setLineDash([bubble.radius, bubble.radius * 1.8]);
-    ctx.strokeStyle = '#FFFFFF44';
-    ctx.lineWidth = 4;
+    ctx.beginPath(); 
+    ctx.transform(1 + scaleH, 0, 0, 1 + scaleV, bubble.position.x, bubble.position.y);
+
+    ctx.moveTo(bubble.currentRadius, 0);
+    ctx.arc(0, 0, bubble.currentRadius, 0, 2 * Math.PI);
+
+    ctx.strokeStyle = '#FFFFFF40';
+    ctx.lineWidth = 3;
     ctx.stroke();
     
     ctx.resetTransform();
@@ -411,7 +412,7 @@ function aquarium(canvasEl) {
     for(let fish of fishes) {
       let shouldChangeMoveDir = Math.random() > 0.97 || !checkInBounds(fish.position);
       let shouldChangeLookDir = Math.random() > 0.4;
-      let shouldMakeBubble = Math.random() > 0.9;
+      let shouldMakeBubble = Math.random() > 0.8;
 
       if(shouldChangeMoveDir) {
         let x = Math.random();
@@ -446,7 +447,8 @@ function aquarium(canvasEl) {
 
         bubbles.push({
           position: new Vector(bubblePosX, bubblePosY),
-          radius: getRandInRange(fish.size / 30, fish.size / 10)
+          radius: getRandInRange(fish.size / 40, fish.size / 15),
+          currentRadius: 0
         });
       }
 
@@ -474,6 +476,10 @@ function aquarium(canvasEl) {
 
       bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor * delta;
       bubble.position.x = bubble.position.x + shiftX;
+      
+      if(bubble.currentRadius < bubble.radius) {
+        bubble.currentRadius += delta * 0.1
+      }
     }
 
     ctx.resetTransform();
