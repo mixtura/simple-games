@@ -171,32 +171,20 @@ function drawWeed(ctx, weed) {
   ctx.stroke();
 
   function addShake(val) {
-    return val + Math.sin(Math.random() / 4) * 10;
+    return val + Math.sin(Math.random() / 10) * 30;
   }
 }
 
-function drawFishes(ctx, fishes, delta) {
+function drawFishes(ctx, fishes) {
   for(let fish of fishes) {
-    fish.position = fish.position.moveAlong(fish.moveDir, fish.speed * delta);
-
     let flip = fish.moveDir.x < 0;
     
     drawFish(ctx, fish, flip, 0);
   }
 }
 
-function drawBubbles(ctx, bubbles, delta) {
-  const bubbleMoveSpeedFactor = 0.03;
-  const bubbleSideMoveAmplitude = 0.2;
-  const bubbleSideMoveSpeedFactor = 0.1;
-
-  
-  for(let bubble of bubbles) {
-    var shiftX = Math.sin(bubble.position.y * bubbleSideMoveSpeedFactor) * bubbleSideMoveAmplitude;
-    
-    bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor * delta;
-    bubble.position.x = bubble.position.x + shiftX;
-    
+function drawBubbles(ctx, bubbles) {  
+  for(let bubble of bubbles) {    
     ctx.beginPath(); 
     ctx.transform(1 + Math.random() * 0.3, 0, 0, 1 + Math.random() * 0.3, bubble.position.x, bubble.position.y);
     ctx.rotate(Math.random() * 1.5);
@@ -339,10 +327,10 @@ function aquarium(canvasEl) {
         moveDir: getRandDir(),
         lookDir: getRandDir(),
         size: getRandInRange(50, 200),
-        speed: getRandInRange(0.06, 0.2),
+        speed: getRandInRange(0.03, 0.1),
         pupilRatio: getRandInRange(0.6, 0.8),
         kind: fishKinds[Math.floor(Math.random() * fishKinds.length)],
-        color: getRandColor(130,200,0,150,0,150),
+        color: getRandColor(130, 200, 0, 150, 0, 150),
         floaterPhase: Math.round(getRandInRange(0, Math.PI * 2))
       });
     }
@@ -374,7 +362,7 @@ function aquarium(canvasEl) {
         layer: layer,
         bendDistance: getRandInRange(10, 20),
         segmentLength: getRandInRange(20, 40),
-        color: getRandColor(10, 30, 0, 30, 10, 80),
+        color: getRandColor(10, 30, 10, 80, 0, 30),
         position: new Vector(
           getRandInRange(0, width), 
           getRandInRange(height, height + 20))
@@ -384,10 +372,14 @@ function aquarium(canvasEl) {
     weeds.sort((a, b) => a.layer > b.layer);
   }
 
+  function getRandInRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
   function getRandColor(
     minR = 0, maxR = 255, 
-    minB = 0, maxB = 255, 
-    minG = 0, maxG = 255) {
+    minG = 0, maxG = 255,
+    minB = 0, maxB = 255) {
       
     let r = getRandInRange(minR, maxR);
     let g = getRandInRange(minG, maxG);
@@ -400,16 +392,19 @@ function aquarium(canvasEl) {
     return `rgb(${r},${g},${b})`;
   }
 
-  function getRandInRange(min, max) {
-    return min + Math.floor(Math.random() * (max - min));
-  }
-
   function checkInBounds(vec) {
     return (
       vec.x > 0 && 
       vec.x < width &&
       vec.y > 0 &&
       vec.y < height);
+  }
+
+  function getBackgroundColor() {
+    let g = Math.sin(new Date() / 3000 + 10) * 30;
+    let b = Math.sin(new Date() / 2000) * 30 + 20;
+    
+    return getColor(0, g, b);
   }
 
   setInterval(function() {
@@ -460,20 +455,33 @@ function aquarium(canvasEl) {
   }, 300);
 
   setInterval(function() {
-    let g = Math.sin(new Date() / 3000 + 10) * 30;
-    let b = Math.sin(new Date() / 2000) * 30 + 20;
-    let backgroundColor = getColor(0, g, b);
-    var currentTime = new Date();
-    let delta = currentTime - lastFrameTime;
+    const bubbleMoveSpeedFactor = 0.03;
+    const bubbleSideMoveAmplitude = 0.2;
+    const bubbleSideMoveSpeedFactor = 0.1;
+    const backgroundColor = getBackgroundColor(); 
+    const currentTime = new Date();
+    const delta = currentTime - lastFrameTime;
 
     lastFrameTime = currentTime;
+
+    for(let fish of fishes) {
+      fish.position = fish.position.moveAlong(fish.moveDir, fish.speed * delta);
+    }
+
+    for(let bubble of bubbles) {
+      var phase = Math.sin(bubble.position.y * bubbleSideMoveSpeedFactor);
+      var shiftX = phase * bubbleSideMoveAmplitude;
+
+      bubble.position.y -= bubble.radius * bubbleMoveSpeedFactor * delta;
+      bubble.position.x = bubble.position.x + shiftX;
+    }
 
     ctx.resetTransform();
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
     drawAnchor(ctx, width / 2, height - 510, 380);
-    drawFishes(ctx, fishes, delta);
+    drawFishes(ctx, fishes);
     drawBubbles(ctx, bubbles, delta);
     drawWeeds(ctx, weeds, width, height);
   }, 0);
