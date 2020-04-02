@@ -357,6 +357,7 @@ function aquarium(canvasEl) {
 
     while(--count >= 0) {
       var layer = Math.round(getRandInRange(0, 3));
+      
       weeds.push({
         length: getRandInRange(minWeedLength, maxWeedLength),
         width: getRandInRange(5, 8),
@@ -412,7 +413,7 @@ function aquarium(canvasEl) {
     for(let fish of fishes) {
       let shouldChangeMoveDir = Math.random() > 0.97 || !checkInBounds(fish.position);
       let shouldChangeLookDir = Math.random() > 0.4;
-      let shouldMakeBubble = Math.random() > 0.8;
+      let shouldMakeBubble = Math.random() > 0.85;
 
       if(shouldChangeMoveDir) {
         let x = Math.random();
@@ -438,16 +439,18 @@ function aquarium(canvasEl) {
       if(shouldMakeBubble) {
         let bubblePosX = fish.position.x;
         let bubblePosY = fish.position.y;
-        
+        let radius = getRandInRange(fish.size / 40, fish.size / 15);
+        let xOffset = fish.size / 2 - radius;
+
         if(fish.moveDir.x > 0) {
-          bubblePosX += fish.size / 2;
+          bubblePosX += xOffset;
         } else {
-          bubblePosX -= fish.size / 2;
+          bubblePosX -= xOffset;
         }
 
         bubbles.push({
           position: new Vector(bubblePosX, bubblePosY),
-          radius: getRandInRange(fish.size / 40, fish.size / 15),
+          radius: radius,
           currentRadius: 0
         });
       }
@@ -462,7 +465,7 @@ function aquarium(canvasEl) {
     const bubbleSideMoveSpeedFactor = 0.1;
     const backgroundColor = getBackgroundColor(); 
     const currentTime = new Date();
-    const delta = currentTime - lastFrameTime;
+    const delta = Math.min(100, currentTime - lastFrameTime);
 
     lastFrameTime = currentTime;
 
@@ -478,7 +481,7 @@ function aquarium(canvasEl) {
       bubble.position.x = bubble.position.x + shiftX;
       
       if(bubble.currentRadius < bubble.radius) {
-        bubble.currentRadius += delta * 0.1
+        bubble.currentRadius += delta * 0.08
       }
     }
 
