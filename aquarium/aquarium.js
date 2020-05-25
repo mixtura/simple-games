@@ -465,7 +465,7 @@ function aquarium(canvasEl) {
     const bubbleSideMoveSpeedFactor = 0.1;
     const backgroundColor = getBackgroundColor(); 
     const currentTime = new Date();
-    const delta = Math.min(100, currentTime - lastFrameTime);
+    const delta = currentTime - lastFrameTime;
 
     lastFrameTime = currentTime;
 
@@ -481,7 +481,7 @@ function aquarium(canvasEl) {
       bubble.position.x = bubble.position.x + shiftX;
       
       if(bubble.currentRadius < bubble.radius) {
-        bubble.currentRadius += delta * 0.08
+        bubble.currentRadius += Math.min(100, delta) * 0.08
       }
     }
 
