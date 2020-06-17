@@ -273,6 +273,31 @@ function drawAnchor(ctx, x, y, length) {
   }
 }
 
+function drawBackground(ctx, primaryColor, secondaryColor, width, height) {
+  ctx.fillStyle = primaryColor;
+  ctx.fillRect(0, 0, width, height);
+  
+  ctx.strokeStyle = secondaryColor;
+  ctx.lineWidth = 1000;
+
+  let offset = Math.sin(new Date() / 3000) * 200;
+
+  ctx.beginPath();
+  ctx.moveTo(-100, offset);
+  ctx.lineTo(width, offset + height);
+  ctx.stroke();
+
+  ctx.lineWidth = 500;
+  ctx.strokeStyle = primaryColor;
+
+  ctx.stroke();
+
+  ctx.lineWidth = 100;
+  ctx.strokeStyle = secondaryColor;
+
+  ctx.stroke();
+}
+
 const fishKinds = [{
   tailWidth: 0.45,
   tailLength: 0.5,
@@ -402,9 +427,11 @@ function aquarium(canvasEl) {
       vec.y < height);
   }
 
-  function getBackgroundColor() {
-    let g = Math.sin(new Date() / 3000 + 10) * 30;
-    let b = Math.sin(new Date() / 2000) * 30 + 20;
+  function getBackgroundColor(offset) {
+    offset = offset || 0;
+    
+    let g = Math.sin(new Date() / 3000 + 10 + offset) * 30;
+    let b = Math.sin(new Date() / 2000 + offset) * 30 + 20;
     
     return getColor(0, g, b);
   }
@@ -464,6 +491,8 @@ function aquarium(canvasEl) {
     const bubbleSideMoveAmplitude = 0.2;
     const bubbleSideMoveSpeedFactor = 0.1;
     const backgroundColor = getBackgroundColor(); 
+    const secondaryBackgroundColor = getBackgroundColor(0.2);
+
     const currentTime = new Date();
     const delta = currentTime - lastFrameTime;
 
@@ -486,9 +515,8 @@ function aquarium(canvasEl) {
     }
 
     ctx.resetTransform();
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
+    drawBackground(ctx, backgroundColor, secondaryBackgroundColor, width, height);    
     drawAnchor(ctx, width / 2, height - 510, 380);
     drawFishes(ctx, fishes);
     drawBubbles(ctx, bubbles, delta);
