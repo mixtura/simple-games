@@ -185,8 +185,8 @@ function drawFishes(ctx, fishes) {
 
 function drawBubbles(ctx, bubbles) {  
   for(let bubble of bubbles) {
-    var scaleH = Math.sin(new Date() / 100) * 0.15;
-    var scaleV = Math.cos(new Date() / 100) * 0.15;
+    var scaleH = Math.sin(new Date() / 100 + bubble.phase) * 0.15;
+    var scaleV = Math.cos(new Date() / 100 + bubble.phase) * 0.15;
 
     ctx.beginPath(); 
     ctx.transform(1 + scaleH, 0, 0, 1 + scaleV, bubble.position.x, bubble.position.y);
@@ -441,6 +441,7 @@ function aquarium(canvasEl) {
       let shouldChangeMoveDir = Math.random() > 0.97 || !checkInBounds(fish.position);
       let shouldChangeLookDir = Math.random() > 0.4;
       let shouldMakeBubble = Math.random() > 0.85;
+      let shouldMakeGroundBubble = Math.random() > 0.96;
 
       if(shouldChangeMoveDir) {
         let x = Math.random();
@@ -463,6 +464,19 @@ function aquarium(canvasEl) {
           Math.random() - 0.5);
       }
 
+      if(shouldMakeGroundBubble) {
+        let bubblePosX = getRandInRange(0, width);
+        let bubblePosY = height - 1;
+        let radius = getRandInRange(1, 5);
+
+        bubbles.push({
+          position: new Vector(bubblePosX, bubblePosY),
+          radius: radius,
+          currentRadius: 0,
+          phase: getRandInRange(0, Math.PI)
+        });
+      }
+
       if(shouldMakeBubble) {
         let bubblePosX = fish.position.x;
         let bubblePosY = fish.position.y;
@@ -478,7 +492,8 @@ function aquarium(canvasEl) {
         bubbles.push({
           position: new Vector(bubblePosX, bubblePosY),
           radius: radius,
-          currentRadius: 0
+          currentRadius: 0,
+          phase: getRandInRange(0, Math.PI)
         });
       }
 
@@ -486,7 +501,7 @@ function aquarium(canvasEl) {
     }
   }, 300);
 
-  setInterval(function() {
+  function render() {
     const bubbleMoveSpeedFactor = 0.03;
     const bubbleSideMoveAmplitude = 0.2;
     const bubbleSideMoveSpeedFactor = 0.1;
@@ -521,7 +536,9 @@ function aquarium(canvasEl) {
     drawFishes(ctx, fishes);
     drawBubbles(ctx, bubbles, delta);
     drawWeeds(ctx, weeds, width, height);
-  }, 0);
+  }
+
+  setInterval(render, 0);
 }
 
 aquarium(document.getElementById("waterCanvas"))
