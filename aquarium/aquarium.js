@@ -352,7 +352,7 @@ function aquarium(canvasEl) {
         position: getRandPos(),
         moveDir: getRandDir(),
         lookDir: getRandDir(),
-        size: getRandInRange(50, 200),
+        size: getRandInRange(10, 300),
         speed: getRandInRange(0.03, 0.1),
         pupilRatio: getRandInRange(0.6, 0.8),
         kind: fishKinds[Math.floor(Math.random() * fishKinds.length)],
@@ -438,7 +438,8 @@ function aquarium(canvasEl) {
 
   setInterval(function() {
     for(let fish of fishes) {
-      let shouldChangeMoveDir = Math.random() > 0.97 || !checkInBounds(fish.position);
+      let outOfBounds = !checkInBounds(fish.position);
+      let shouldChangeMoveDir = Math.random() > 0.97 || outOfBounds;
       let shouldChangeLookDir = Math.random() > 0.4;
       let shouldMakeBubble = Math.random() > 0.85;
       let shouldMakeGroundBubble = Math.random() > 0.96;
@@ -446,16 +447,18 @@ function aquarium(canvasEl) {
       if(shouldChangeMoveDir) {
         let x = Math.random();
         let y = Math.random() * 0.2;
+        let xSign = Math.sign(Math.random() - 0.5);
+        let ySign = Math.sign(Math.random() - 0.5);
 
-        if(fish.position.x >= width || fish.lookDir.x > 0) {
-          x = x * (-1);
+        if(fish.position.x >= width) {
+          xSign = (-1);
         }
 
-        if(fish.position.y >= height || fish.lookDir.y > 0) {
-          y = y * (-1);
+        if(fish.position.y >= height) {
+          ySign = (-1);
         }
 
-        fish.moveDir = new Vector(x, y);
+        fish.moveDir = new Vector(x * xSign, y * ySign);
       }
 
       if(shouldChangeLookDir) {
@@ -503,7 +506,7 @@ function aquarium(canvasEl) {
 
   function render() {
     const bubbleMoveSpeedFactor = 0.03;
-    const bubbleSideMoveAmplitude = 0.2;
+    const bubbleSideMoveAmplitude = 0.32;
     const bubbleSideMoveSpeedFactor = 0.1;
     const backgroundColor = getBackgroundColor(); 
     const secondaryBackgroundColor = getBackgroundColor(0.2);
